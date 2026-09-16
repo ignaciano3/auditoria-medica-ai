@@ -1,0 +1,81 @@
+"use client";
+
+import type { Document } from "@audit/domain";
+import { useCallback, useEffect, useState } from "react";
+import { ui } from "../lib/i18n.ts";
+import { DocumentStatusBadge } from "./document-status-badge.tsx";
+import { pollIntervalMs } from "./document-status.ts";
+
+type DocumentsState =
+  | { kind: "loading" }
+  | { kind: "loaded"; documents: Document[] }
+  | { kind: "error" };
+
+export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
+  const [state, setState] = useState<DocumentsState>({ kind: "loading" });
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch("/api/documents", { cache: "no-store" });
+      if (!response.ok) throw new Error("documents request failed");
+      const payload = (await response.json()) as { documents: Document[] };
+      setState({ kind: "loaded", documents: payload.documents });
+    } catch {
+      setState({ kind: "error" });
+    }
+  }, []);
+
+  useEffect(() => {
+    load().catch(() => undefined);
+  }, [load]);
+
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    load().catch(() => undefined);
+  }, [load, refreshKey]);
+
+  const documents = state.kind === "loaded" ? state.documents : [];
+
+  useEffect(() => {
+    const intervals = documents
+      .map((doc) => pollIntervalMs(doc.status))
+      .filter((ms): ms is number => ms !== null);
+    if (intervals.length === 0) return;
+    const timer = setInterval(
+      () => {
+        load().catch(() => undefined);
+      },
+      Math.min(...intervals),
+    );
+    return () => clearInterval(timer);
+  }, [documents, load]);
+
+  if (state.kind === "loading") {
+    return <p className="muted">{ui.loading}</p>;
+  }
+  if (state.kind === "error") {
+    return (
+      <p className="error" role="alert">
+        {ui.loadError}
+      </p>
+    );
+  }
+  if (documents.length === 0) {
+    return <p className="muted">{ui.noDocuments}</p>;
+  }
+  return (
+    <ul className="document-list">
+      {documents.map((doc) => (
+        <li key={doc.id} className="document-item">
+          <span className="document-name">{doc.originalFilename}</span>
+          <DocumentStatusBadge status={doc.status} />
+          {doc.status === "ready" && doc.pageCount !== null ? (
+            <span className="muted">
+              {doc.pageCount} {ui.pages}
+            </span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}

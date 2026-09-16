@@ -32,7 +32,15 @@ export const errors = {
 } as const;
 
 export const ui = {
+  appTitle: "Historias clínicas",
   newDocument: "Nueva historia",
+  upload: "Subir",
+  uploading: "Subiendo…",
+  uploadSuccess: "Documento subido.",
+  loading: "Cargando…",
+  noDocuments: "No hay documentos.",
+  loadError: "No se pudieron cargar los documentos.",
+  pages: "páginas",
   processing: "Procesando",
   summary: "Resumen",
   timeline: "Línea temporal",
