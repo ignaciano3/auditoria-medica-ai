@@ -294,7 +294,11 @@ English leaks into the UI (no i18n framework at MVP).
 
 ## 12. Testing strategy
 
-Bun test. The priority is clinical extraction and finding correctness, not UI.
+Tests are written **within each phase (TDD)**, not deferred. The priority is
+clinical extraction and finding correctness, not UI. `bun test` runs in each
+workspace and is exposed as the Turborepo `test` task, so `bun run test` at the
+root runs the whole suite (with caching). Each phase's definition of done
+includes its tests plus `lint` and `typecheck`.
 
 - **Unit**: date normalization (`dd/mm/yyyy`, `dd/mm/yy`, bare `dd/mm`, ranges),
   reduce/merge (dedupe + contradiction preservation), Zod validation and the
@@ -371,7 +375,8 @@ The app must stay runnable after each phase.
   committed PDF; `.env.example`; `/health` placeholder in Spanish. **Replace
   the default linter/formatter with Biome** (where the package supports it) and
   enable strict lint + strict TypeScript rules; wire the Turborepo `lint`,
-  `typecheck`, and `format` tasks. `apps/worker` has no upstream scaffolder, so
+  `typecheck`, `test`, and `format` tasks. `apps/worker` has no upstream
+  scaffolder, so
   generate it from the Turborepo package template/`turbo gen` and keep it
   consistent with generated workspaces. Verify the scaffolded apps boot and all
   three commands pass before adding any custom code.
@@ -387,7 +392,8 @@ The app must stay runnable after each phase.
 - **P6 — review UI.** Evidence navigation, PDF viewer polish, review/dismiss/
   note.
 - **P7 — chat & lifecycle.** Grounded Spanish chat, delete/retention.
-- **P8 — hardening.** Tests, PHI/logging audit, TLS run book, docs.
+- **P8 — hardening.** Full regression pass, PHI/logging audit, TLS run book,
+  docs. (Tests are written throughout P0–P7, not only here.)
 
 ## 15. Non-goals (unchanged from spec §40)
 
