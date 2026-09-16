@@ -64,6 +64,7 @@
       "name": "@audit/documents",
       "version": "0.0.0",
       "dependencies": {
+        "@audit/domain": "workspace:*",
         "mupdf": "^1.28.1",
       },
       "devDependencies": {

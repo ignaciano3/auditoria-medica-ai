@@ -3,6 +3,7 @@ export {
   type DocumentPage,
   type DocumentStatus,
   isTerminalStatus,
+  PAGE_DOC_TYPES,
   type PageDocType,
   type PageStatus,
 } from "./document.ts";

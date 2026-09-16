@@ -10,17 +10,20 @@ export type DocumentStatus =
 
 export type PageStatus = "pending" | "text" | "vision" | "skipped" | "failed";
 
-export type PageDocType =
-  | "epicrisis"
-  | "admission"
-  | "evolution"
-  | "imaging"
-  | "lab"
-  | "microbiology"
-  | "medsRecord"
-  | "flowsheet"
-  | "nursing"
-  | "other";
+export const PAGE_DOC_TYPES = [
+  "epicrisis",
+  "admission",
+  "evolution",
+  "imaging",
+  "lab",
+  "microbiology",
+  "medsRecord",
+  "flowsheet",
+  "nursing",
+  "other",
+] as const;
+
+export type PageDocType = (typeof PAGE_DOC_TYPES)[number];
 
 export type DocumentPage = {
   pageNumber: number;
