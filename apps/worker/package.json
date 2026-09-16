@@ -13,6 +13,9 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
+    "@audit/db": "workspace:*",
+    "@audit/domain": "workspace:*",
+    "@audit/documents": "workspace:*",
     "@audit/lib": "workspace:*"
   },
   "devDependencies": {

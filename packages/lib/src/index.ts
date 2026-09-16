@@ -3,6 +3,7 @@ export {
   documentStatusLabels,
   errors,
   pageDocTypeLabels,
+  processing,
   ui,
 } from "./i18n/es.ts";
 export { InMemoryQueue } from "./queue/in-memory-queue.ts";

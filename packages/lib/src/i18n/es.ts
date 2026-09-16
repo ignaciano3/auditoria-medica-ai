@@ -29,6 +29,12 @@ export const errors = {
   tooLarge: "El archivo supera el tamaño máximo permitido.",
   uploadFailed: "No se pudo subir el archivo.",
   notFound: "No se encontró el documento.",
+  processingFailed: "No se pudo procesar el documento.",
+} as const;
+
+export const processing = {
+  flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",
+  notDataBearing: "Página sin datos clínicos: no se extrae.",
 } as const;
 
 export const ui = {

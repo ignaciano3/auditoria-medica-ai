@@ -33,6 +33,9 @@
       "name": "@audit/worker",
       "version": "0.0.0",
       "dependencies": {
+        "@audit/db": "workspace:*",
+        "@audit/documents": "workspace:*",
+        "@audit/domain": "workspace:*",
         "@audit/lib": "workspace:*",
       },
       "devDependencies": {
