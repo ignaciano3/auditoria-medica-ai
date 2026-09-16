@@ -8,10 +8,22 @@ export type DocumentRow = typeof documents.$inferSelect;
 export function createDocumentRepository(db: Database) {
   return {
     async create(input: {
+      id?: string;
       originalFilename: string;
       originalKey: string;
     }): Promise<DocumentRow> {
-      const [row] = await db.insert(documents).values(input).returning();
+      const values =
+        input.id === undefined
+          ? {
+              originalFilename: input.originalFilename,
+              originalKey: input.originalKey,
+            }
+          : {
+              id: input.id,
+              originalFilename: input.originalFilename,
+              originalKey: input.originalKey,
+            };
+      const [row] = await db.insert(documents).values(values).returning();
       if (!row) throw new Error("Failed to create document");
       return row;
     },

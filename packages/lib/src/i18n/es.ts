@@ -25,6 +25,7 @@ export const pageDocTypeLabels: Record<PageDocType, string> = {
 export const errors = {
   noFile: "No se recibió ningún archivo.",
   notPdf: "El archivo debe ser un PDF.",
+  invalidFile: "El archivo no es válido.",
   tooLarge: "El archivo supera el tamaño máximo permitido.",
   uploadFailed: "No se pudo subir el archivo.",
   notFound: "No se encontró el documento.",

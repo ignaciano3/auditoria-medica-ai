@@ -7,20 +7,27 @@ import {
 
 export class PgBossQueue implements JobQueue {
   private readonly boss: PgBoss;
-  private started = false;
+  private startPromise: Promise<void> | undefined;
 
   constructor(options: { connectionString: string }) {
     this.boss = new PgBoss({ connectionString: options.connectionString });
   }
 
-  async start(): Promise<void> {
-    if (this.started) return;
-    await this.boss.start();
-    await this.boss.createQueue(PROCESS_DOCUMENT_JOB);
-    this.started = true;
+  start(): Promise<void> {
+    this.startPromise ??= (async () => {
+      try {
+        await this.boss.start();
+        await this.boss.createQueue(PROCESS_DOCUMENT_JOB);
+      } catch (error) {
+        this.startPromise = undefined;
+        throw error;
+      }
+    })();
+    return this.startPromise;
   }
 
   async stop(): Promise<void> {
+    this.startPromise = undefined;
     await this.boss.stop();
   }
 

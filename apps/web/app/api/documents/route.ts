@@ -1,6 +1,7 @@
 import { errors } from "@audit/lib";
 import { NextResponse } from "next/server";
 import { getContainer } from "../../../lib/container.ts";
+import { serializeDocument } from "../../../lib/serialize-document.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +19,11 @@ export function validateUpload(
   ) {
     return { ok: false, error: errors.notPdf };
   }
-  if (meta.size > maxUploadBytes || meta.size <= 0) {
+  if (meta.size > maxUploadBytes) {
     return { ok: false, error: errors.tooLarge };
+  }
+  if (meta.size <= 0) {
+    return { ok: false, error: errors.invalidFile };
   }
   return { ok: true };
 }
@@ -49,6 +53,7 @@ export async function POST(request: Request): Promise<Response> {
       "application/pdf",
     );
     const document = await container.documents.create({
+      id,
       originalFilename: file.name,
       originalKey: key,
     });
@@ -59,6 +64,8 @@ export async function POST(request: Request): Promise<Response> {
       { status: 201 },
     );
   } catch {
+    await container.storage.delete(key).catch(() => undefined);
+    await container.documents.remove(id).catch(() => undefined);
     return NextResponse.json({ error: errors.uploadFailed }, { status: 500 });
   }
 }
@@ -66,14 +73,6 @@ export async function POST(request: Request): Promise<Response> {
 export async function GET(): Promise<Response> {
   const rows = await getContainer().documents.list();
   return NextResponse.json({
-    documents: rows.map((row) => ({
-      id: row.id,
-      originalFilename: row.originalFilename,
-      status: row.status,
-      pageCount: row.pageCount,
-      error: row.error,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    })),
+    documents: rows.map((row) => serializeDocument(row)),
   });
 }

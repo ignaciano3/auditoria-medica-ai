@@ -1,6 +1,7 @@
 import { errors } from "@audit/lib";
 import { NextResponse } from "next/server";
 import { getContainer } from "../../../../lib/container.ts";
+import { serializeDocument } from "../../../../lib/serialize-document.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,17 +15,7 @@ export async function GET(
   if (!row) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
-  return NextResponse.json({
-    document: {
-      id: row.id,
-      originalFilename: row.originalFilename,
-      status: row.status,
-      pageCount: row.pageCount,
-      error: row.error,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    },
-  });
+  return NextResponse.json({ document: serializeDocument(row) });
 }
 
 export async function DELETE(
@@ -37,7 +28,7 @@ export async function DELETE(
   if (!row) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
-  await container.storage.delete(row.originalKey);
   await container.documents.remove(id);
+  await container.storage.delete(row.originalKey).catch(() => undefined);
   return new Response(null, { status: 204 });
 }
