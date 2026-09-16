@@ -22,6 +22,7 @@ function makeDeps(options: {
     }>
   >;
   storageGet?: () => Promise<Uint8Array>;
+  storagePut?: (key: string) => Promise<void>;
   classifyPage?: (input: PageImage) => Promise<PageClassification>;
   transcribePage?: (input: PageImage) => Promise<string>;
 }) {
@@ -58,7 +59,7 @@ function makeDeps(options: {
       get: options.storageGet ?? (() => Promise.resolve(new Uint8Array([1]))),
       put: (key) => {
         storedKeys.push(key);
-        return Promise.resolve();
+        return options.storagePut?.(key) ?? Promise.resolve();
       },
       delete: () => Promise.resolve(),
     },
@@ -168,7 +169,11 @@ describe("createProcessDocument", () => {
     expect(pages[0]?.status).toBe("failed");
     expect(pages[0]?.imageKey).toBe("documents/d1/pages/1.png");
     expect(pages[1]?.status).toBe("vision");
-    expect(deps.updates.at(-1)?.status).toBe("ready");
+    expect(deps.updates.map((update) => update.status)).toEqual([
+      "processing",
+      "extracting",
+      "ready",
+    ]);
   });
 
   test("marks the document as error and rethrows when rendering fails", async () => {
@@ -191,6 +196,22 @@ describe("createProcessDocument", () => {
     const failure = new Error("storage boom");
     const deps = makeDeps({
       storageGet: () => Promise.reject(failure),
+    });
+
+    await expect(deps.processDocument({ documentId: "d1" })).rejects.toBe(
+      failure,
+    );
+
+    const last = deps.updates.at(-1);
+    expect(last?.status).toBe("error");
+    expect(last?.error).toBe(errors.processingFailed);
+    expect(deps.saved).toHaveLength(0);
+  });
+
+  test("marks the document as error and rethrows when storing a page fails", async () => {
+    const failure = new Error("put boom");
+    const deps = makeDeps({
+      storagePut: () => Promise.reject(failure),
     });
 
     await expect(deps.processDocument({ documentId: "d1" })).rejects.toBe(

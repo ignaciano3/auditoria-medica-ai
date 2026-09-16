@@ -45,9 +45,12 @@ export function createDocumentRepository(db: Database) {
       const values: {
         status: DocumentStatus;
         updatedAt: Date;
-        error?: string | null;
-      } = { status, updatedAt: new Date() };
-      if (error !== undefined) values.error = error;
+        error: string | null;
+      } = {
+        status,
+        updatedAt: new Date(),
+        error: status === "error" ? (error ?? null) : null,
+      };
       await db.update(documents).set(values).where(eq(documents.id, id));
     },
     async setPageCount(id: string, pageCount: number): Promise<void> {

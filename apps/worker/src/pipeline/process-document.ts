@@ -127,24 +127,18 @@ async function processAllPages(
     rendered.map((page) => [page.pageNumber, page.png]),
   );
   const processedPages: DocumentPage[] = [];
-  const storedPages = new Set<number>();
 
   for (const page of classified) {
     const key = pageImageKey(documentId, page.pageNumber);
+    const png = pngByPage.get(page.pageNumber);
+    if (!png) throw new Error("Missing rendered page");
+    await deps.storage.put(key, png, "image/png");
     try {
-      const png = pngByPage.get(page.pageNumber);
-      if (!png) throw new Error("Missing rendered page");
-      await deps.storage.put(key, png, "image/png");
-      storedPages.add(page.pageNumber);
       processedPages.push(
         await resolvePage(deps, logger, documentId, page, png, key),
       );
     } catch {
-      processedPages.push(
-        storedPages.has(page.pageNumber)
-          ? { ...page, imageKey: key, status: "failed" }
-          : { ...page, status: "failed" },
-      );
+      processedPages.push({ ...page, imageKey: key, status: "failed" });
       logger.error({
         event: "page_failed",
         documentId,
