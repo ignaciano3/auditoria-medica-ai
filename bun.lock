@@ -46,11 +46,15 @@
     "packages/domain": {
       "name": "@audit/domain",
       "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+      },
     },
     "packages/lib": {
       "name": "@audit/lib",
       "version": "0.0.0",
       "dependencies": {
+        "@audit/domain": "workspace:*",
         "zod": "^4.6.5",
       },
       "devDependencies": {
