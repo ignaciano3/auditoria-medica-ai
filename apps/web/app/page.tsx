@@ -1,3 +1,8 @@
 export default function Home() {
-  return <h1>Auditoría médica — base del proyecto</h1>;
+  return (
+    <main>
+      <h1>Historias clínicas</h1>
+      <p>Nueva historia</p>
+    </main>
+  );
 }

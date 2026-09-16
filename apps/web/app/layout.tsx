@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Auditoría médica",
-  description: "Base del proyecto de auditoría médica",
+  title: "Auditoría Médica",
+  description: "Auditoría de historias clínicas",
 };
 
 export default function RootLayout({
