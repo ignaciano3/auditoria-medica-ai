@@ -1,6 +1,6 @@
 import type { DocumentStatus } from "@audit/domain";
 import { isTerminalStatus } from "@audit/domain";
-import { documentStatusLabels } from "../lib/i18n.ts";
+import { documentStatusLabels } from "@audit/lib/i18n";
 
 export function statusLabel(status: DocumentStatus): string {
   return documentStatusLabels[status];

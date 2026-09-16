@@ -1,7 +1,7 @@
 "use client";
 
+import { errors, ui } from "@audit/lib/i18n";
 import { type ChangeEvent, useRef, useState } from "react";
-import { errors, ui } from "../lib/i18n.ts";
 
 type UploadState =
   | { kind: "idle" }
@@ -50,7 +50,6 @@ export function DocumentUploader({ onUploaded }: { onUploaded: () => void }) {
           className="upload-input"
           type="file"
           accept="application/pdf"
-          aria-label={ui.newDocument}
           disabled={state.kind === "uploading"}
           onChange={handleFileChange}
         />

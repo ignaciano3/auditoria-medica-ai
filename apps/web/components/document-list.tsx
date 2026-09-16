@@ -1,8 +1,8 @@
 "use client";
 
 import type { Document } from "@audit/domain";
-import { useCallback, useEffect, useState } from "react";
-import { ui } from "../lib/i18n.ts";
+import { ui } from "@audit/lib/i18n";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DocumentStatusBadge } from "./document-status-badge.tsx";
 import { pollIntervalMs } from "./document-status.ts";
 
@@ -13,15 +13,27 @@ type DocumentsState =
 
 export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
   const [state, setState] = useState<DocumentsState>({ kind: "loading" });
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/documents", { cache: "no-store" });
       if (!response.ok) throw new Error("documents request failed");
       const payload = (await response.json()) as { documents: Document[] };
+      if (!mountedRef.current) return;
       setState({ kind: "loaded", documents: payload.documents });
     } catch {
-      setState({ kind: "error" });
+      if (!mountedRef.current) return;
+      setState((current) =>
+        current.kind === "loaded" ? current : { kind: "error" },
+      );
     }
   }, []);
 
