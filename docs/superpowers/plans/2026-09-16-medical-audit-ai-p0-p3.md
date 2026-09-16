@@ -173,6 +173,11 @@ If the PDF was ever pushed to `origin`, history on the remote still contains it.
 
 ### Task 2: Scaffold the Turborepo monorepo
 
+> **Required sub-skill:** load the installed `turborepo` skill
+> (`.agents/skills/turborepo/SKILL.md`) before this task and follow its
+> guidance for `turbo.json`, task pipelines, `dependsOn`, caching, internal
+> packages, and boundaries.
+
 **Files:**
 - Create (generated): `package.json`, `turbo.json`, `bun.lock`, `apps/web/**`, `packages/*/package.json`
 - Create: `packages/config/biome.json`, `packages/config/tsconfig.base.json`, `biome.json`
