@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@audit/domain": "workspace:*",
-    "mupdf": "^1.28.1"
+    "mupdf": "^1.28.1",
+    "openai": "^7.17.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2"

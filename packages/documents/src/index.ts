@@ -1,4 +1,8 @@
 export { classifyPages } from "./classification/classify-pages.ts";
+export {
+  type OpenAICompatibleClient,
+  OpenAIVisionOCRProvider,
+} from "./ocr/openai-ocr-provider.ts";
 export type {
   OCRProvider,
   PageClassification,
