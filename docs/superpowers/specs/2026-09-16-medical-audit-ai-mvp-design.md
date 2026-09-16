@@ -28,12 +28,13 @@ These were decided with the project owner during brainstorming:
 | OCR | **Vision-capable OpenAI model** transcribes scanned/image pages. OCR is abstracted behind `OCRProvider`. |
 | Auth | **No authentication for the MVP.** Network/reverse-proxy is the only protection. `userId` is still stored on rows for future multi-user. |
 | Processing model | Single repo, one image, two processes (`web` + `worker`), background jobs via **pg-boss** (Postgres-backed queue). No Redis. |
+| Repo structure | **Turborepo monorepo** with Bun workspaces. `apps/*` (web, worker) and `packages/*` (domain, db, ai, documents, audit, lib, shared config). |
 | ORM | **Drizzle** (TypeScript-first) with PostgreSQL. |
 | Extraction | **Map-reduce**: classify pages, extract per chunk, merge deterministically. |
 | Handwritten flowsheets | **Skipped with a reason**, not extracted cell-by-cell. |
 | Chat retrieval | **Keyword/BM25 over page text + structured-record lookup.** No embeddings at MVP. |
 | Time coverage | Full MVP (Phase 1–7 of the spec) is designed; execution is phased so the app stays runnable after every phase. |
-| Scaffolding | Use the **official scaffolders/CLIs** (`bun create next-app`, `shadcn` init, Drizzle init, etc.) to generate files and current dependency versions. Do not hand-write `package.json`, lockfiles, or framework config from memory. |
+| Scaffolding | Use the **official scaffolders/CLIs** (`bunx create-turbo`, `shadcn` init, Drizzle init, etc.) to generate files and current dependency versions. Do not hand-write `package.json`, lockfiles, or framework config from memory. |
 | Lint & types | Use **Biome** as the linter/formatter wherever a package supports it (replace the scaffolder's default ESLint/Prettier). Enable strict lint rules and strict TypeScript compiler options. |
 
 ## 3. Findings from the real example document
@@ -76,12 +77,19 @@ real file stays local-only.
 
 ## 4. Runtime and infrastructure
 
-One Bun + TypeScript repository, one Docker image, two process entrypoints:
+A **Turborepo monorepo** using Bun workspaces. One Docker image, two
+application entrypoints:
 
-- `web` — Next.js (App Router): UI + server-side API. Enqueues jobs; never
+- `apps/web` — Next.js (App Router): UI + server-side API. Enqueues jobs; never
   processes documents inline.
-- `worker` — same codebase, different entrypoint. Polls pg-boss and runs the
-  document pipeline.
+- `apps/worker` — Bun process: polls pg-boss and runs the document pipeline.
+- `packages/*` — shared, independently testable modules consumed by both apps:
+  `domain`, `db`, `ai`, `documents`, `audit`, `lib`, plus shared Biome/TS
+  config packages.
+
+Turborepo caches build/lint/typecheck/test tasks and enforces the task graph
+(`build` depends on dependencies' `build`). Both apps import the same domain and
+provider packages, so `web` and `worker` cannot drift.
 
 `docker compose up` starts:
 
@@ -200,23 +208,24 @@ page text.
 - `LLMProvider` interface exactly per spec §17: `extractClinicalRecord`,
   `analyzeClinicalRecord`, `generateClinicalSummary`, `generateAuditSummary`.
 - `OCRProvider` interface per spec §16: `extractPages(file) → DocumentPage[]`.
-- First implementations live under `ai/providers/openai/` and
-  `documents/ocr/openai/`; provider-specific code (SDKs, prompts, image
-  encoding, JSON mode) never leaks out.
-- Prompts under `ai/prompts/` implement spec §18 extraction rules: extract only
-  supported information, never invent, preserve sources and dates, keep
-  contradictions, do not diagnose or recommend treatment, extract from Spanish
-  documents, return Spanish user-facing content.
+- First implementations live under `packages/ai/src/providers/openai/` and
+  `packages/documents/src/ocr/openai/`; provider-specific code (SDKs, prompts,
+  image encoding, JSON mode) never leaks out.
+- Prompts under `packages/ai/src/prompts/` implement spec §18 extraction rules:
+  extract only supported information, never invent, preserve sources and dates,
+  keep contradictions, do not diagnose or recommend treatment, extract from
+  Spanish documents, return Spanish user-facing content.
 - All LLM outputs are schema-validated (Zod) before entering the domain model.
 
 ## 8. Audit engine
 
 Deterministic rules and semantic AI analysis are separate layers.
 
-- `audit/rules/` — each rule implements `AuditRule.evaluate(record): Finding[]`
-  and is registered in an `AuditRuleRegistry` driven by
-  `AuditRuleDefinition[]` (id, name, description, category, severity, enabled)
-  per spec §21. Doctors can add/disable rules without editing engine logic.
+- `packages/audit/src/rules/` — each rule implements
+  `AuditRule.evaluate(record): Finding[]` and is registered in an
+  `AuditRuleRegistry` driven by `AuditRuleDefinition[]` (id, name, description,
+  category, severity, enabled) per spec §21. Doctors can add/disable rules
+  without editing engine logic.
 - Initial rules (spec §20): (1) date consistency, (2) allergy/medication
   conflict, (3) contradictory patient information, (4) medication duplication,
   (5) unexplained medication changes (may call the LLM for semantic
@@ -279,7 +288,9 @@ English leaks into the UI (no i18n framework at MVP).
 - **No analytics** capturing identifiers or clinical data (spec §32); only
   non-sensitive events if any.
 - **Ops**: compose file with healthchecks, `.env.example`, and a README run book
-  for the Ubuntu server.
+  for the Ubuntu server. The single image is built from the monorepo using
+  `turbo prune` (web + worker targets) so the container ships only required
+  workspaces.
 
 ## 12. Testing strategy
 
@@ -312,53 +323,58 @@ Bun test. The priority is clinical extraction and finding correctness, not UI.
   `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`,
   `noUnusedLocals`, and `noUnusedParameters`. Avoid `any`; prefer `unknown` +
   narrowing and Zod at trust boundaries.
-- `bun run lint`, `bun run typecheck`, and `bun run format` are the canonical
-  commands and must pass before a phase is considered done.
+- Config lives in `packages/config` and is extended by every workspace, so a
+  single change applies across the monorepo.
+- `bun run lint`, `bun run typecheck`, and `bun run format` run through
+  Turborepo at the repo root and must pass before a phase is considered done.
 
 ## 13. Repository layout
 
-Adapted from spec §37 to a single Bun/Next app:
+Turborepo monorepo (Bun workspaces), adapted from spec §37. Shared logic lives
+in packages so `apps/web` and `apps/worker` import the same code.
 
 ```text
-src/
-  app/                      # Next.js routes (dashboard, documents, review, api)
-  components/               # uploader, clinical-summary, timeline, findings, pdf-viewer, chat
-  domain/                   # clinical-record, findings, audit-rules types + logic
+apps/
+  web/                      # Next.js App Router: UI + API routes
+    src/app/                # dashboard, documents, review, api
+    src/components/         # uploader, clinical-summary, timeline, findings, pdf-viewer, chat
+  worker/                   # Bun entrypoint: pg-boss consumer + pipeline orchestration
+
+packages/
+  domain/                   # clinical-record, findings, audit-rule types + pure logic
+  db/                       # Drizzle schema + repositories
   ai/
-    providers/openai/
-    extraction/
-    analysis/
-    prompts/
-  documents/
-    ingestion/
-    ocr/
-    parsing/
+    src/providers/openai/
+    src/extraction/
+    src/analysis/
+    src/prompts/
+  documents/                # ingestion, ocr, parsing, page rendering
   audit/
-    rules/
-    engine/
-  db/
-    schema/
-    repositories/
-  lib/
-    validation/
-    storage/
-    dates/
-  worker/                   # worker entrypoint
+    src/rules/
+    src/engine/
+  lib/                      # validation (Zod), storage, dates, Spanish copy
+  config/                   # shared Biome + TypeScript configs used by every workspace
+
+docker/                     # Dockerfile(s) + compose
+docs/
 ```
 
 ## 14. Phased execution
 
 The app must stay runnable after each phase.
 
-- **P0 — scaffold & safety.** Generate the app with the **official scaffolders
-  and current package versions** (`bun create next-app`, `shadcn` init, Drizzle
-  init) rather than hand-written files; add Tailwind + shadcn + Drizzle +
-  compose; `.gitignore` PHI and purge the committed PDF; `.env.example`;
-  `/health` placeholder in Spanish. **Replace the default linter/formatter with
-  Biome** (where the package supports it) and enable strict lint + strict
-  TypeScript rules; wire `bun run lint`, `bun run typecheck`, and
-  `bun run format`. Verify the scaffolded app boots and all three commands pass
-  before adding any custom code.
+- **P0 — scaffold & safety.** Generate the monorepo with the **official
+  scaffolders and current package versions** (`bunx create-turbo` with Bun as
+  the package manager, `shadcn` init, Drizzle init) rather than hand-written
+  files; set up the `packages/*` shared modules and shared `config` package;
+  add Tailwind + shadcn + Drizzle + compose; `.gitignore` PHI and purge the
+  committed PDF; `.env.example`; `/health` placeholder in Spanish. **Replace
+  the default linter/formatter with Biome** (where the package supports it) and
+  enable strict lint + strict TypeScript rules; wire the Turborepo `lint`,
+  `typecheck`, and `format` tasks. `apps/worker` has no upstream scaffolder, so
+  generate it from the Turborepo package template/`turbo gen` and keep it
+  consistent with generated workspaces. Verify the scaffolded apps boot and all
+  three commands pass before adding any custom code.
 - **P1 — upload & storage.** Document model, MinIO storage, upload flow,
   pg-boss, Spanish status UI.
 - **P2 — processing.** Page render, classify, OCR/vision transcription, page
