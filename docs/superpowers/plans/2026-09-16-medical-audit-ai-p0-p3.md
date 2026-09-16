@@ -169,6 +169,8 @@ git commit -m "chore: stop tracking PHI PDFs and ignore all PDFs"
 
 If the PDF was ever pushed to `origin`, history on the remote still contains it. Record in `docs/superpowers/plans/2026-09-16-medical-audit-ai-p0-p3.md` next to this task: **force-push the rewritten history only after the owner confirms, and treat any prior push as a potential leak.** Do not force-push without explicit owner approval.
 
+> **Risk note (completed 2026-09-16):** The real-PHI PDF was purged from local history by rebasing the post-PHI commits off the dedicated `f7ac61d` commit and force-pushing `main` (owner-authorized). The remote history is now rewritten: any clone or fork made before this force-push still holds the PHI, and GitHub may keep the old blob reachable by its raw SHA until it garbage-collects unreferenced objects. Treat the PDF's sha256 (`897b48bc96d226408e9cf40abdcffdf355427aad0d67eb10efc8776db1e52989`) as leaked and rotate/void any real patient data associated with it as policy requires. The file is retained only as a local, gitignored dev fixture at `fixtures/local/auditoria-ejemplo.pdf`.
+
 ---
 
 ### Task 2: Scaffold the Turborepo monorepo

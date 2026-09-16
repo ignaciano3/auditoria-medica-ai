@@ -1,0 +1,19 @@
+# Dependencies / builds
+node_modules/
+.turbo/
+.next/
+dist/
+coverage/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# PHI: never commit real clinical documents
+*.pdf
+auditoria-ejemplo.pdf
+fixtures/local/
+
+# Worktrees
+.worktrees/
