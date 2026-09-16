@@ -33,6 +33,7 @@ These were decided with the project owner during brainstorming:
 | Handwritten flowsheets | **Skipped with a reason**, not extracted cell-by-cell. |
 | Chat retrieval | **Keyword/BM25 over page text + structured-record lookup.** No embeddings at MVP. |
 | Time coverage | Full MVP (Phase 1–7 of the spec) is designed; execution is phased so the app stays runnable after every phase. |
+| Scaffolding | Use the **official scaffolders/CLIs** (`bun create next-app`, `shadcn` init, Drizzle init, etc.) to generate files and current dependency versions. Do not hand-write `package.json`, lockfiles, or framework config from memory. |
 
 ## 3. Findings from the real example document
 
@@ -332,9 +333,12 @@ src/
 
 The app must stay runnable after each phase.
 
-- **P0 — scaffold & safety.** Bun + Next + Tailwind + shadcn + Drizzle + compose;
-  `.gitignore` PHI and purge the committed PDF; `.env.example`; `/health`
-  placeholder in Spanish.
+- **P0 — scaffold & safety.** Generate the app with the **official scaffolders
+  and current package versions** (`bun create next-app`, `shadcn` init, Drizzle
+  init) rather than hand-written files; add Tailwind + shadcn + Drizzle +
+  compose; `.gitignore` PHI and purge the committed PDF; `.env.example`;
+  `/health` placeholder in Spanish. Verify the scaffolded app boots before
+  adding any custom code.
 - **P1 — upload & storage.** Document model, MinIO storage, upload flow,
   pg-boss, Spanish status UI.
 - **P2 — processing.** Page render, classify, OCR/vision transcription, page
