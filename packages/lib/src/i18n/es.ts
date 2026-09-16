@@ -32,6 +32,10 @@ export const errors = {
   processingFailed: "No se pudo procesar el documento.",
 } as const;
 
+export function pageIndicator(page: number, total: number): string {
+  return `Página ${page} de ${total}`;
+}
+
 export const processing = {
   flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",
   notDataBearing: "Página sin datos clínicos: no se extrae.",
@@ -46,6 +50,13 @@ export const ui = {
   loading: "Cargando…",
   noDocuments: "No hay documentos.",
   loadError: "No se pudieron cargar los documentos.",
+  documentLoadError: "No se pudo cargar el documento.",
+  noPages: "El documento no tiene páginas.",
+  previousPage: "Anterior",
+  nextPage: "Siguiente",
+  zoomIn: "Acercar",
+  zoomOut: "Alejar",
+  pageImageAlt: "Página del documento",
   pages: "páginas",
   processing: "Procesando",
   summary: "Resumen",

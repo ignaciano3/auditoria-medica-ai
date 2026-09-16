@@ -1,4 +1,8 @@
-import { createDocumentRepository, getDb } from "@audit/db";
+import {
+  createDocumentPageRepository,
+  createDocumentRepository,
+  getDb,
+} from "@audit/db";
 import {
   type JobQueue,
   PgBossQueue,
@@ -8,9 +12,11 @@ import {
 } from "@audit/lib";
 
 type DocumentRepository = ReturnType<typeof createDocumentRepository>;
+type DocumentPageRepository = ReturnType<typeof createDocumentPageRepository>;
 
 export type Container = {
   documents: DocumentRepository;
+  pages: DocumentPageRepository;
   storage: StorageProvider;
   queue: JobQueue;
 };
@@ -20,8 +26,10 @@ let cached: Container | undefined;
 export function getContainer(): Container {
   if (!cached) {
     const env = getEnv();
+    const db = getDb(env.DATABASE_URL);
     cached = {
-      documents: createDocumentRepository(getDb(env.DATABASE_URL)),
+      documents: createDocumentRepository(db),
+      pages: createDocumentPageRepository(db),
       storage: new S3Storage({
         endpoint: env.S3_ENDPOINT,
         bucket: env.S3_BUCKET,

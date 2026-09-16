@@ -3,6 +3,7 @@ export {
   documentStatusLabels,
   errors,
   pageDocTypeLabels,
+  pageIndicator,
   processing,
   ui,
 } from "./i18n/es.ts";
