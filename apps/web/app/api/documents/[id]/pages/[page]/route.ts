@@ -10,8 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string; page: string }> },
 ): Promise<Response> {
   const { id, page } = await params;
-  const pageNumber = Number.parseInt(page, 10);
-  if (!Number.isFinite(pageNumber) || pageNumber < 1) {
+  const pageNumber = Number(page);
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
   const container = getContainer();

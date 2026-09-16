@@ -3,6 +3,7 @@ export {
   documentStatusLabels,
   errors,
   pageDocTypeLabels,
+  pageImageAlt,
   pageIndicator,
   processing,
   ui,

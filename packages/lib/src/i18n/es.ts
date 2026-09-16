@@ -36,6 +36,10 @@ export function pageIndicator(page: number, total: number): string {
   return `Página ${page} de ${total}`;
 }
 
+export function pageImageAlt(page: number): string {
+  return `Página ${page} del documento`;
+}
+
 export const processing = {
   flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",
   notDataBearing: "Página sin datos clínicos: no se extrae.",
@@ -56,7 +60,6 @@ export const ui = {
   nextPage: "Siguiente",
   zoomIn: "Acercar",
   zoomOut: "Alejar",
-  pageImageAlt: "Página del documento",
   pages: "páginas",
   processing: "Procesando",
   summary: "Resumen",

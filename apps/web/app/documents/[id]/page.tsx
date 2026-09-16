@@ -40,13 +40,13 @@ export default function DocumentDetailPage() {
         setState({ kind: "error" });
       }
     }
-    load().catch(() => undefined);
+    load();
   }, [documentId]);
 
   if (state.kind === "loading") {
     return (
       <main className="page">
-        <p className="muted">{ui.loading}</p>
+        <output className="muted">{ui.loading}</output>
       </main>
     );
   }
@@ -61,26 +61,22 @@ export default function DocumentDetailPage() {
     );
   }
 
-  const document = state.document;
-  const pageCount = document.pageCount;
+  const doc = state.document;
+  const pageCount = doc.pageCount;
 
   return (
     <main className="page">
       <header className="document-header">
-        <h1>{document.originalFilename}</h1>
-        <DocumentStatusBadge status={document.status} />
+        <h1>{doc.originalFilename}</h1>
+        <DocumentStatusBadge status={doc.status} />
       </header>
-      {document.status === "error" && document.error !== null ? (
+      {doc.status === "error" && doc.error !== null ? (
         <p className="error" role="alert">
-          {document.error}
+          {doc.error}
         </p>
       ) : null}
       {pageCount !== null && pageCount > 0 ? (
-        <PdfViewer
-          documentId={document.id}
-          pageCount={pageCount}
-          initialPage={1}
-        />
+        <PdfViewer documentId={doc.id} pageCount={pageCount} initialPage={1} />
       ) : (
         <p className="muted">{pageCount === null ? ui.loading : ui.noPages}</p>
       )}

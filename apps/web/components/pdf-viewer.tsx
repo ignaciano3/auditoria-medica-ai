@@ -1,6 +1,6 @@
 "use client";
 
-import { pageIndicator, ui } from "@audit/lib/i18n";
+import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
 import { useState } from "react";
 import { clampPage } from "./pdf-viewer-utils.ts";
 
@@ -40,7 +40,7 @@ export function PdfViewer({
         >
           {ui.previousPage}
         </button>
-        <span className="pdf-page-indicator">
+        <span className="pdf-page-indicator" aria-live="polite">
           {pageIndicator(currentPage, pageCount)}
         </span>
         <button
@@ -74,7 +74,7 @@ export function PdfViewer({
       <div className="pdf-page">
         <img
           src={`/api/documents/${documentId}/pages/${currentPage}`}
-          alt={`${ui.pageImageAlt} ${currentPage}`}
+          alt={pageImageAlt(currentPage)}
           style={{ width: `${zoom * 100}%` }}
         />
       </div>

@@ -193,7 +193,7 @@ a {
 
 .pdf-page img {
   display: block;
-  max-width: 100%;
+  max-width: none;
   height: auto;
   margin: 0 auto;
 }
