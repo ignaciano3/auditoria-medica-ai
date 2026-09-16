@@ -12,6 +12,7 @@ coverage/
 
 # PHI: never commit real clinical documents
 *.pdf
+!packages/documents/fixtures/*.pdf
 auditoria-ejemplo.pdf
 fixtures/local/
 

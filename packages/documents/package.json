@@ -13,5 +13,11 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --pass-with-no-tests"
+  },
+  "dependencies": {
+    "mupdf": "^1.28.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2"
   }
 }
