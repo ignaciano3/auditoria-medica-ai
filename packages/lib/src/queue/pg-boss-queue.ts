@@ -7,14 +7,17 @@ import {
 
 export class PgBossQueue implements JobQueue {
   private readonly boss: PgBoss;
+  private started = false;
 
   constructor(options: { connectionString: string }) {
     this.boss = new PgBoss({ connectionString: options.connectionString });
   }
 
   async start(): Promise<void> {
+    if (this.started) return;
     await this.boss.start();
     await this.boss.createQueue(PROCESS_DOCUMENT_JOB);
+    this.started = true;
   }
 
   async stop(): Promise<void> {

@@ -22,6 +22,14 @@ export const pageDocTypeLabels: Record<PageDocType, string> = {
   other: "Otro",
 };
 
+export const errors = {
+  noFile: "No se recibió ningún archivo.",
+  notPdf: "El archivo debe ser un PDF.",
+  tooLarge: "El archivo supera el tamaño máximo permitido.",
+  uploadFailed: "No se pudo subir el archivo.",
+  notFound: "No se encontró el documento.",
+} as const;
+
 export const ui = {
   newDocument: "Nueva historia",
   processing: "Procesando",

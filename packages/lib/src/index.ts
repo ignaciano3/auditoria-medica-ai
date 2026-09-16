@@ -1,6 +1,7 @@
 export { type Env, getEnv, parseEnv } from "./env.ts";
 export {
   documentStatusLabels,
+  errors,
   pageDocTypeLabels,
   ui,
 } from "./i18n/es.ts";
