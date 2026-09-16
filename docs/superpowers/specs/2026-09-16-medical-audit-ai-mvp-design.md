@@ -34,6 +34,7 @@ These were decided with the project owner during brainstorming:
 | Chat retrieval | **Keyword/BM25 over page text + structured-record lookup.** No embeddings at MVP. |
 | Time coverage | Full MVP (Phase 1–7 of the spec) is designed; execution is phased so the app stays runnable after every phase. |
 | Scaffolding | Use the **official scaffolders/CLIs** (`bun create next-app`, `shadcn` init, Drizzle init, etc.) to generate files and current dependency versions. Do not hand-write `package.json`, lockfiles, or framework config from memory. |
+| Lint & types | Use **Biome** as the linter/formatter wherever a package supports it (replace the scaffolder's default ESLint/Prettier). Enable strict lint rules and strict TypeScript compiler options. |
 
 ## 3. Findings from the real example document
 
@@ -298,6 +299,22 @@ Bun test. The priority is clinical extraction and finding correctness, not UI.
 - **Failure paths**: malformed/incomplete LLM output, retry then fail,
   incomplete-analysis labelling.
 
+### 12.1 Linting and type safety
+
+- **Biome** is the linter and formatter wherever a package supports it. Where a
+  tool only ships an ESLint plugin and Biome cannot cover it, keep the minimal
+  ESLint setup for that tool and note the exception; do not run both over the
+  same files.
+- Enable Biome's recommended rules plus the strict/high-severity groups
+  (correctness, suspicious, complexity, performance, security), formatting on,
+  and import organization.
+- Strict TypeScript: `strict: true` plus `noUncheckedIndexedAccess`,
+  `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`,
+  `noUnusedLocals`, and `noUnusedParameters`. Avoid `any`; prefer `unknown` +
+  narrowing and Zod at trust boundaries.
+- `bun run lint`, `bun run typecheck`, and `bun run format` are the canonical
+  commands and must pass before a phase is considered done.
+
 ## 13. Repository layout
 
 Adapted from spec §37 to a single Bun/Next app:
@@ -337,8 +354,11 @@ The app must stay runnable after each phase.
   and current package versions** (`bun create next-app`, `shadcn` init, Drizzle
   init) rather than hand-written files; add Tailwind + shadcn + Drizzle +
   compose; `.gitignore` PHI and purge the committed PDF; `.env.example`;
-  `/health` placeholder in Spanish. Verify the scaffolded app boots before
-  adding any custom code.
+  `/health` placeholder in Spanish. **Replace the default linter/formatter with
+  Biome** (where the package supports it) and enable strict lint + strict
+  TypeScript rules; wire `bun run lint`, `bun run typecheck`, and
+  `bun run format`. Verify the scaffolded app boots and all three commands pass
+  before adding any custom code.
 - **P1 — upload & storage.** Document model, MinIO storage, upload flow,
   pg-boss, Spanish status UI.
 - **P2 — processing.** Page render, classify, OCR/vision transcription, page
