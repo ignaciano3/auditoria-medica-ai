@@ -32,7 +32,12 @@ export const errors = {
   processingFailed: "No se pudo procesar el documento.",
   noExtractableText: "No se pudo extraer texto de ninguna página.",
   extractionFailed: "No se pudo extraer información del documento.",
+  deleteFailed: "No se pudo eliminar el documento.",
 } as const;
+
+export function deleteConfirm(filename: string): string {
+  return `¿Eliminar "${filename}"? Esta acción no se puede deshacer.`;
+}
 
 export function pageIndicator(page: number, total: number): string {
   return `Página ${page} de ${total}`;
@@ -104,4 +109,6 @@ export const ui = {
   dismissFinding: "Descartar hallazgo",
   askRecord: "Preguntarle a la historia clínica",
   incompleteAnalysis: "Análisis incompleto",
+  deleteDocument: "Eliminar",
+  deleting: "Eliminando…",
 } as const;

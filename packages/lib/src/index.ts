@@ -1,6 +1,7 @@
 export { type Env, getEnv, parseEnv } from "./env.ts";
 export {
   clinicalRecord,
+  deleteConfirm,
   documentStatusLabels,
   errors,
   failedChunksIndicator,

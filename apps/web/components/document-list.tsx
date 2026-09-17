@@ -4,6 +4,7 @@ import type { Document } from "@audit/domain";
 import { ui } from "@audit/lib/i18n";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DeleteDocumentButton } from "./delete-document-button.tsx";
 import { pollIntervalMs } from "./document-status.ts";
 import { DocumentStatusBadge } from "./document-status-badge.tsx";
 
@@ -99,6 +100,22 @@ export function DocumentList({
               {doc.pageCount} {ui.pages}
             </span>
           ) : null}
+          <DeleteDocumentButton
+            documentId={doc.id}
+            fileName={doc.originalFilename}
+            onDeleted={() =>
+              setState((current) =>
+                current.kind === "loaded"
+                  ? {
+                      kind: "loaded",
+                      documents: current.documents.filter(
+                        (entry) => entry.id !== doc.id,
+                      ),
+                    }
+                  : current,
+              )
+            }
+          />
         </li>
       ))}
     </ul>

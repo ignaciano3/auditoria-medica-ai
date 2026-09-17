@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   clinicalRecord,
+  deleteConfirm,
   documentStatusLabels,
   errors,
   failedChunksIndicator,
@@ -44,6 +45,16 @@ describe("clinicalRecord labels", () => {
   test("has the extraction-failed error", () => {
     expect(errors.extractionFailed).toBe(
       "No se pudo extraer información del documento.",
+    );
+  });
+
+  test("has the delete-failed error", () => {
+    expect(errors.deleteFailed).toBe("No se pudo eliminar el documento.");
+  });
+
+  test("formats the delete confirmation with the file name", () => {
+    expect(deleteConfirm("historia.pdf")).toBe(
+      '¿Eliminar "historia.pdf"? Esta acción no se puede deshacer.',
     );
   });
 });

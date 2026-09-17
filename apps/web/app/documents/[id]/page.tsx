@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
+import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 import { getContainer } from "../../../lib/container.ts";
@@ -55,6 +56,11 @@ async function DocumentContent({
           {doc.originalFilename}
         </h1>
         <DocumentStatusBadge status={doc.status} />
+        <DeleteDocumentButton
+          documentId={doc.id}
+          fileName={doc.originalFilename}
+          redirectTo="/"
+        />
       </header>
       {doc.status === "error" && doc.error !== null ? (
         <p className="text-[#d1242f]" role="alert">
