@@ -1,5 +1,3 @@
-"use client";
-
 import type { ClinicalRecord } from "@audit/domain";
 import {
   clinicalRecord,

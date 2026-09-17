@@ -8,12 +8,18 @@ import { pollIntervalMs } from "./document-status.ts";
 import { DocumentStatusBadge } from "./document-status-badge.tsx";
 
 type DocumentsState =
-  | { kind: "loading" }
   | { kind: "loaded"; documents: Document[] }
   | { kind: "error" };
 
-export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
-  const [state, setState] = useState<DocumentsState>({ kind: "loading" });
+export function DocumentList({
+  initialDocuments,
+}: {
+  initialDocuments: Document[];
+}) {
+  const [state, setState] = useState<DocumentsState>({
+    kind: "loaded",
+    documents: initialDocuments,
+  });
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -33,7 +39,9 @@ export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
     } catch {
       if (!mountedRef.current) return;
       setState((current) =>
-        current.kind === "loaded" ? current : { kind: "error" },
+        current.kind === "loaded" && current.documents.length > 0
+          ? current
+          : { kind: "error" },
       );
     }
   }, []);
@@ -41,11 +49,6 @@ export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
   useEffect(() => {
     load().catch(() => undefined);
   }, [load]);
-
-  useEffect(() => {
-    if (refreshKey === 0) return;
-    load().catch(() => undefined);
-  }, [load, refreshKey]);
 
   const documents = state.kind === "loaded" ? state.documents : [];
 
@@ -63,9 +66,6 @@ export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
     return () => clearInterval(timer);
   }, [documents, load]);
 
-  if (state.kind === "loading") {
-    return <p className="muted">{ui.loading}</p>;
-  }
   if (state.kind === "error") {
     return (
       <p className="error" role="alert">
