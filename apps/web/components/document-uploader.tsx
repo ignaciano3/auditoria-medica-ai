@@ -2,6 +2,7 @@
 
 import { errors, ui } from "@audit/lib/i18n";
 import { type ChangeEvent, useRef, useState } from "react";
+import { uploadDocument } from "../lib/actions.ts";
 
 type UploadState =
   | { kind: "idle" }
@@ -9,7 +10,7 @@ type UploadState =
   | { kind: "success" }
   | { kind: "error"; message: string };
 
-export function DocumentUploader({ onUploaded }: { onUploaded: () => void }) {
+export function DocumentUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<UploadState>({ kind: "idle" });
 
@@ -20,19 +21,12 @@ export function DocumentUploader({ onUploaded }: { onUploaded: () => void }) {
     const body = new FormData();
     body.append("file", file);
     try {
-      const response = await fetch("/api/documents", { method: "POST", body });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setState({
-          kind: "error",
-          message: payload?.error ?? errors.uploadFailed,
-        });
+      const result = await uploadDocument(body);
+      if (!result.ok) {
+        setState({ kind: "error", message: result.error });
         return;
       }
       setState({ kind: "success" });
-      onUploaded();
     } catch {
       setState({ kind: "error", message: errors.uploadFailed });
     } finally {
