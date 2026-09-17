@@ -1,4 +1,4 @@
-import { OpenAIProvider } from "@audit/ai";
+import { HeuristicLLMProvider, OpenAIProvider } from "@audit/ai";
 import {
   createClinicalRecordRepository,
   createDocumentPageRepository,
@@ -50,10 +50,13 @@ async function main(): Promise<void> {
             apiKey: env.OPENAI_API_KEY,
             model: env.OCR_MODEL,
           }),
-    provider: new OpenAIProvider({
-      apiKey: env.OPENAI_API_KEY,
-      model: env.LLM_MODEL,
-    }),
+    provider:
+      env.LLM_PROVIDER === "heuristic"
+        ? new HeuristicLLMProvider()
+        : new OpenAIProvider({
+            apiKey: env.OPENAI_API_KEY,
+            model: env.LLM_MODEL,
+          }),
     clinicalRecords: createClinicalRecordRepository(db),
     logger,
   });

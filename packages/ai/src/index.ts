@@ -29,6 +29,7 @@ export {
   EXTRACTION_SYSTEM_PROMPT,
 } from "./prompts/extraction.ts";
 export { FakeLLMProvider } from "./providers/fake/fake-provider.ts";
+export { HeuristicLLMProvider } from "./providers/heuristic/heuristic-provider.ts";
 export {
   LLMExtractionError,
   type OpenAICompatibleClient,
