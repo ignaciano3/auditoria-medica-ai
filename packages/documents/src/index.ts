@@ -9,6 +9,10 @@ export {
   OpenAIVisionOCRProvider,
 } from "./ocr/openai-ocr-provider.ts";
 export {
+  TesseractOCRProvider,
+  type TesseractRecognize,
+} from "./ocr/tesseract-ocr-provider.ts";
+export {
   DEFAULT_RENDER_SCALE,
   inspectPdf,
   renderPdfPages,

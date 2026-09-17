@@ -17,6 +17,7 @@
   "dependencies": {
     "@audit/domain": "workspace:*",
     "mupdf": "^1.28.1",
+    "node-tesseract-ocr": "^2.2.1",
     "openai": "^7.17.0",
     "zod": "^4.6.5"
   },

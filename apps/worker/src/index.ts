@@ -1,11 +1,15 @@
-import { OpenAIProvider } from "@audit/ai";
+import { HeuristicLLMProvider, OpenAIProvider } from "@audit/ai";
 import {
   createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
   getDb,
 } from "@audit/db";
-import { OpenAIVisionOCRProvider, renderPdfPages } from "@audit/documents";
+import {
+  OpenAIVisionOCRProvider,
+  renderPdfPages,
+  TesseractOCRProvider,
+} from "@audit/documents";
 import { getEnv, PgBossQueue, S3Storage } from "@audit/lib";
 import {
   createProcessDocument,
@@ -34,14 +38,25 @@ async function main(): Promise<void> {
       secretKey: env.S3_SECRET_KEY,
     }),
     render: renderPdfPages,
-    ocr: new OpenAIVisionOCRProvider({
-      apiKey: env.OPENAI_API_KEY,
-      model: env.OCR_MODEL,
-    }),
-    provider: new OpenAIProvider({
-      apiKey: env.OPENAI_API_KEY,
-      model: env.LLM_MODEL,
-    }),
+    ocr:
+      env.OCR_PROVIDER === "tesseract"
+        ? new TesseractOCRProvider({
+            classifier: new OpenAIVisionOCRProvider({
+              apiKey: env.OPENAI_API_KEY,
+              model: env.OCR_MODEL,
+            }),
+          })
+        : new OpenAIVisionOCRProvider({
+            apiKey: env.OPENAI_API_KEY,
+            model: env.OCR_MODEL,
+          }),
+    provider:
+      env.LLM_PROVIDER === "heuristic"
+        ? new HeuristicLLMProvider()
+        : new OpenAIProvider({
+            apiKey: env.OPENAI_API_KEY,
+            model: env.LLM_MODEL,
+          }),
     clinicalRecords: createClinicalRecordRepository(db),
     logger,
   });
