@@ -1,3 +1,12 @@
+export {
+  type ChunkPagesOptions,
+  chunkPages,
+} from "./extraction/chunk-pages.ts";
+export {
+  emptyClinicalRecord,
+  mapExtract,
+  type MapExtractOptions,
+} from "./extraction/map-extract.ts";
 export type { LLMProvider } from "./llm-provider.ts";
 export {
   ANALYSIS_CORRECTION_PROMPT,
