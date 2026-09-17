@@ -38,12 +38,16 @@ export {
   type PageStatus,
 } from "./document.ts";
 export {
+  assignStableFindingIds,
   FINDING_CATEGORIES,
+  FINDING_REVIEW_STATUSES,
   FINDING_SEVERITIES,
   type Finding,
   type FindingCategory,
+  type FindingReviewStatus,
   type FindingSeverity,
   findingSchema,
+  findingSignature,
 } from "./finding.ts";
 export type {
   Evidence,
