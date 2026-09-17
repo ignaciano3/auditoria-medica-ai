@@ -1,6 +1,6 @@
 import {
-  type LLMProvider,
   chunkPages,
+  type LLMProvider,
   mapExtract,
   reduceRecords,
   stampFindingProvenance,
@@ -8,22 +8,22 @@ import {
 } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import {
-  type OCRProvider,
   classifyPages,
+  type OCRProvider,
   renderPdfPages,
 } from "@audit/documents";
 import {
   type ClinicalRecord,
+  clinicalRecordSchema,
   type DocumentPage,
   type DocumentStatus,
   type Finding,
-  clinicalRecordSchema,
 } from "@audit/domain";
 import {
-  type ProcessDocumentJob,
-  type StorageProvider,
   errors,
+  type ProcessDocumentJob,
   processing,
+  type StorageProvider,
 } from "@audit/lib";
 
 type RenderedPage = {

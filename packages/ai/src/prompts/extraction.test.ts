@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { DocumentPage } from "@audit/domain";
 import {
-  EXTRACTION_SYSTEM_PROMPT,
   buildAnalysisUserPrompt,
   buildClinicalSummaryUserPrompt,
   buildExtractionCorrectionPrompt,
   buildExtractionUserPrompt,
+  EXTRACTION_SYSTEM_PROMPT,
 } from "../index.ts";
 
 const page = (pageNumber: number, text: string): DocumentPage => ({

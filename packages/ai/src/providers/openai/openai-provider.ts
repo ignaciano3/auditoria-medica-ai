@@ -1,8 +1,8 @@
 import {
   type ClinicalRecord,
+  clinicalRecordSchema,
   type DocumentPage,
   type Finding,
-  clinicalRecordSchema,
   findingSchema,
 } from "@audit/domain";
 import OpenAI from "openai";
@@ -12,13 +12,13 @@ import {
   ANALYSIS_CORRECTION_PROMPT,
   ANALYSIS_SYSTEM_PROMPT,
   AUDIT_SUMMARY_SYSTEM_PROMPT,
-  CLINICAL_SUMMARY_SYSTEM_PROMPT,
-  EXTRACTION_CORRECTION_PROMPT,
-  EXTRACTION_SYSTEM_PROMPT,
   buildAnalysisUserPrompt,
   buildAuditSummaryUserPrompt,
   buildClinicalSummaryUserPrompt,
   buildExtractionUserPrompt,
+  CLINICAL_SUMMARY_SYSTEM_PROMPT,
+  EXTRACTION_CORRECTION_PROMPT,
+  EXTRACTION_SYSTEM_PROMPT,
 } from "../../prompts/extraction.ts";
 
 type ChatCompletionResponse = {

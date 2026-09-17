@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   type ClinicalRecord,
+  clinicalRecordSchema,
   type DocumentPage,
   type Finding,
-  clinicalRecordSchema,
 } from "@audit/domain";
 import type { LLMProvider } from "../llm-provider.ts";
 import { emptyClinicalRecord, mapExtract } from "./map-extract.ts";

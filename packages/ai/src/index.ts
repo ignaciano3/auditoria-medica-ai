@@ -4,8 +4,8 @@ export {
 } from "./extraction/chunk-pages.ts";
 export {
   emptyClinicalRecord,
-  mapExtract,
   type MapExtractOptions,
+  mapExtract,
 } from "./extraction/map-extract.ts";
 export { reduceRecords } from "./extraction/reduce-record.ts";
 export {

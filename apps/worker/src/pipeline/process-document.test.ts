@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  emptyClinicalRecord,
   FakeLLMProvider,
   type LLMProvider,
-  emptyClinicalRecord,
 } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import type { PageClassification, PageImage } from "@audit/documents";
@@ -15,8 +15,8 @@ import type {
 } from "@audit/domain";
 import { errors, processing } from "@audit/lib";
 import {
-  ExtractionFailedError,
   createProcessDocument,
+  ExtractionFailedError,
 } from "./process-document.ts";
 
 type Update = { status: DocumentStatus; error: string | null };

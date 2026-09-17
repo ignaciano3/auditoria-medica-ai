@@ -6,10 +6,10 @@ import {
   getDb,
 } from "@audit/db";
 import { OpenAIVisionOCRProvider, renderPdfPages } from "@audit/documents";
-import { PgBossQueue, S3Storage, getEnv } from "@audit/lib";
+import { getEnv, PgBossQueue, S3Storage } from "@audit/lib";
 import {
-  type ProcessingLogger,
   createProcessDocument,
+  type ProcessingLogger,
 } from "./pipeline/process-document.ts";
 
 const logger: ProcessingLogger = {

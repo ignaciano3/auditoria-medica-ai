@@ -5,6 +5,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "lint:fix": "biome check . --write",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "turbo run format"
