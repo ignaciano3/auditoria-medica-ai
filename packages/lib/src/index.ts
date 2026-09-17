@@ -1,7 +1,9 @@
 export { type Env, getEnv, parseEnv } from "./env.ts";
 export {
+  clinicalRecord,
   documentStatusLabels,
   errors,
+  failedPagesIndicator,
   pageDocTypeLabels,
   pageImageAlt,
   pageIndicator,

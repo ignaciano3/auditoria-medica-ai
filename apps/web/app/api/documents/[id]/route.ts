@@ -11,11 +11,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await params;
-  const row = await getContainer().documents.getById(id);
+  const container = getContainer();
+  const row = await container.documents.getById(id);
   if (!row) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
-  return NextResponse.json({ document: serializeDocument(row) });
+  const [clinical, pages] = await Promise.all([
+    container.clinicalRecords.getByDocument(id),
+    container.pages.listForDocument(id),
+  ]);
+  return NextResponse.json({
+    document: serializeDocument(row),
+    record: clinical?.record ?? null,
+    pages: pages.map((page) => ({
+      pageNumber: page.pageNumber,
+      status: page.status,
+      docType: page.docType,
+    })),
+  });
 }
 
 export async function DELETE(

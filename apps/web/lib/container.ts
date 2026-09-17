@@ -1,4 +1,5 @@
 import {
+  createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
   getDb,
@@ -13,10 +14,14 @@ import {
 
 type DocumentRepository = ReturnType<typeof createDocumentRepository>;
 type DocumentPageRepository = ReturnType<typeof createDocumentPageRepository>;
+type ClinicalRecordRepository = ReturnType<
+  typeof createClinicalRecordRepository
+>;
 
 export type Container = {
   documents: DocumentRepository;
   pages: DocumentPageRepository;
+  clinicalRecords: ClinicalRecordRepository;
   storage: StorageProvider;
   queue: JobQueue;
 };
@@ -30,6 +35,7 @@ export function getContainer(): Container {
     cached = {
       documents: createDocumentRepository(db),
       pages: createDocumentPageRepository(db),
+      clinicalRecords: createClinicalRecordRepository(db),
       storage: new S3Storage({
         endpoint: env.S3_ENDPOINT,
         bucket: env.S3_BUCKET,

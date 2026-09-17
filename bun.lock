@@ -33,6 +33,7 @@
       "name": "@audit/worker",
       "version": "0.0.0",
       "dependencies": {
+        "@audit/ai": "workspace:*",
         "@audit/db": "workspace:*",
         "@audit/documents": "workspace:*",
         "@audit/domain": "workspace:*",

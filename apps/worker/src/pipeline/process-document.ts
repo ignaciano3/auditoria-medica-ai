@@ -1,9 +1,24 @@
 import {
+  type LLMProvider,
+  chunkPages,
+  mapExtract,
+  reduceRecords,
+  stampFindingProvenance,
+  stampProvenance,
+} from "@audit/ai";
+import type { ClinicalRecordIndex } from "@audit/db";
+import {
   type OCRProvider,
   classifyPages,
   renderPdfPages,
 } from "@audit/documents";
-import type { DocumentPage, DocumentStatus } from "@audit/domain";
+import {
+  type ClinicalRecord,
+  type DocumentPage,
+  type DocumentStatus,
+  type Finding,
+  clinicalRecordSchema,
+} from "@audit/domain";
 import {
   type ProcessDocumentJob,
   type StorageProvider,
@@ -41,11 +56,22 @@ type PagesDependency = {
   replaceForDocument(documentId: string, pages: DocumentPage[]): Promise<void>;
 };
 
+type ClinicalRecordsDependency = {
+  upsert(
+    documentId: string,
+    record: ClinicalRecord,
+    findings: Finding[],
+    indexed: ClinicalRecordIndex,
+  ): Promise<void>;
+};
+
 export type ProcessDocumentDeps = {
   documents: DocumentsDependency;
   pages: PagesDependency;
   storage: StorageProvider;
   ocr: OCRProvider;
+  provider: LLMProvider;
+  clinicalRecords: ClinicalRecordsDependency;
   render?: RenderPages;
   logger?: ProcessingLogger;
 };
@@ -177,7 +203,58 @@ export function createProcessDocument(
       );
 
       await deps.pages.replaceForDocument(documentId, processedPages);
+
+      const dataBearingPages = processedPages.filter(
+        (page) =>
+          page.dataBearing &&
+          (page.status === "vision" || page.status === "text"),
+      );
+      if (dataBearingPages.length === 0) {
+        logger.error({ event: "no_extractable_text", documentId });
+        await deps.documents.updateStatus(
+          documentId,
+          "error",
+          errors.noExtractableText,
+        );
+        return;
+      }
+
       await deps.documents.updateStatus(documentId, "extracting");
+
+      const chunks = chunkPages(processedPages);
+      const records = await mapExtract(chunks, deps.provider, {
+        onChunkError: (chunkIndex) => {
+          logger.error({ event: "chunk_failed", documentId, chunkIndex });
+        },
+      });
+      const merged = stampProvenance(reduceRecords(records), documentId);
+      const validated = clinicalRecordSchema.parse(merged) as ClinicalRecord;
+
+      let findings: Finding[] = [];
+      try {
+        findings = await deps.provider.analyzeClinicalRecord(validated);
+      } catch {
+        logger.error({ event: "findings_failed", documentId });
+      }
+      findings = stampFindingProvenance(findings, documentId);
+
+      const indexed: ClinicalRecordIndex = {};
+      if (validated.patient.name !== undefined) {
+        indexed.patientName = validated.patient.name.value;
+      }
+      if (validated.hospitalization.admissionDate !== undefined) {
+        indexed.admissionDate = validated.hospitalization.admissionDate.value;
+      }
+      if (validated.hospitalization.dischargeDate !== undefined) {
+        indexed.dischargeDate = validated.hospitalization.dischargeDate.value;
+      }
+
+      await deps.clinicalRecords.upsert(
+        documentId,
+        validated,
+        findings,
+        indexed,
+      );
       await deps.documents.updateStatus(documentId, "ready");
       logger.info({ event: "document_ready", documentId });
     } catch (error) {

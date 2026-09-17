@@ -1,16 +1,83 @@
 import { describe, expect, test } from "bun:test";
+import {
+  FakeLLMProvider,
+  type LLMProvider,
+  emptyClinicalRecord,
+} from "@audit/ai";
+import type { ClinicalRecordIndex } from "@audit/db";
 import type { PageClassification, PageImage } from "@audit/documents";
-import type { DocumentPage, DocumentStatus } from "@audit/domain";
+import type {
+  ClinicalRecord,
+  DocumentPage,
+  DocumentStatus,
+  Finding,
+  Source,
+} from "@audit/domain";
 import { errors, processing } from "@audit/lib";
 import { createProcessDocument } from "./process-document.ts";
 
 type Update = { status: DocumentStatus; error: string | null };
+
+type Upserted = {
+  documentId: string;
+  record: ClinicalRecord;
+  findings: Finding[];
+  indexed: ClinicalRecordIndex;
+};
 
 const evolution: PageClassification = {
   docType: "evolution",
   handwritten: false,
   dataBearing: true,
 };
+
+const ghostSource = (pageNumber: number, text: string): Source => ({
+  documentId: "",
+  pageNumber,
+  text,
+});
+
+function extractedRecord(): ClinicalRecord {
+  const record = emptyClinicalRecord();
+  record.patient.name = { value: "Ana", sources: [ghostSource(1, "Ana")] };
+  record.hospitalization.diagnoses = [
+    { value: "Sepsis", sources: [ghostSource(1, "sepsis")] },
+  ];
+  return record;
+}
+
+const findingFixture: Finding[] = [
+  {
+    id: "f1",
+    severity: "high",
+    category: "contradiction",
+    title: "Contradicción",
+    explanation: "Dos fechas.",
+    evidence: [{ source: ghostSource(1, "fecha"), relevance: "r" }],
+    requiresHumanReview: true,
+  },
+];
+
+function collectDocumentIds(value: unknown): string[] {
+  if (Array.isArray(value))
+    return value.flatMap((item) => collectDocumentIds(item));
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const own =
+      typeof record.documentId === "string" ? [record.documentId] : [];
+    return [
+      ...own,
+      ...Object.values(record).flatMap((child) => collectDocumentIds(child)),
+    ];
+  }
+  return [];
+}
+
+const defaultRender = () =>
+  Promise.resolve([
+    { pageNumber: 1, png: new Uint8Array([1]), width: 10, height: 10 },
+    { pageNumber: 2, png: new Uint8Array([2]), width: 10, height: 10 },
+  ]);
 
 function makeDeps(options: {
   render?: () => Promise<
@@ -25,6 +92,9 @@ function makeDeps(options: {
   storagePut?: (key: string) => Promise<void>;
   classifyPage?: (input: PageImage) => Promise<PageClassification>;
   transcribePage?: (input: PageImage) => Promise<string>;
+  record?: ClinicalRecord;
+  findings?: Finding[];
+  analyzeError?: Error;
 }) {
   const updates: Update[] = [];
   const saved: DocumentPage[][] = [];
@@ -32,6 +102,28 @@ function makeDeps(options: {
   const pageCounts: number[] = [];
   const infoEvents: Array<Record<string, unknown>> = [];
   const errorEvents: Array<Record<string, unknown>> = [];
+  const upserted: Upserted[] = [];
+  const extractCalls: DocumentPage[][] = [];
+  const analyzeCalls: ClinicalRecord[] = [];
+
+  const base = new FakeLLMProvider({
+    record: options.record ?? extractedRecord(),
+    findings: options.findings ?? findingFixture,
+  });
+  const provider: LLMProvider = {
+    async extractClinicalRecord(pages) {
+      extractCalls.push(pages);
+      return base.extractClinicalRecord(pages);
+    },
+    async analyzeClinicalRecord(record) {
+      analyzeCalls.push(record);
+      if (options.analyzeError) throw options.analyzeError;
+      return base.analyzeClinicalRecord(record);
+    },
+    generateClinicalSummary: (record) => base.generateClinicalSummary(record),
+    generateAuditSummary: (record, findings) =>
+      base.generateAuditSummary(record, findings),
+  };
 
   const processDocument = createProcessDocument({
     documents: {
@@ -63,17 +155,18 @@ function makeDeps(options: {
       },
       delete: () => Promise.resolve(),
     },
-    render:
-      options.render ??
-      (() =>
-        Promise.resolve([
-          { pageNumber: 1, png: new Uint8Array([1]), width: 10, height: 10 },
-          { pageNumber: 2, png: new Uint8Array([2]), width: 10, height: 10 },
-        ])),
+    render: options.render ?? defaultRender,
     ocr: {
       classifyPage: options.classifyPage ?? (() => Promise.resolve(evolution)),
       transcribePage:
         options.transcribePage ?? (() => Promise.resolve("texto")),
+    },
+    provider,
+    clinicalRecords: {
+      upsert: (documentId, record, findings, indexed) => {
+        upserted.push({ documentId, record, findings, indexed });
+        return Promise.resolve();
+      },
     },
     logger: {
       info: (event) => {
@@ -93,6 +186,9 @@ function makeDeps(options: {
     pageCounts,
     infoEvents,
     errorEvents,
+    upserted,
+    extractCalls,
+    analyzeCalls,
   };
 }
 
@@ -137,6 +233,36 @@ describe("createProcessDocument", () => {
     });
   });
 
+  test("persists the reduced record, stamps provenance, and marks ready", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.updates.map((update) => update.status)).toEqual([
+      "processing",
+      "extracting",
+      "ready",
+    ]);
+    expect(deps.extractCalls).toHaveLength(1);
+    expect(deps.analyzeCalls).toHaveLength(1);
+    expect(deps.upserted).toHaveLength(1);
+
+    const persisted = deps.upserted[0];
+    expect(persisted?.documentId).toBe("d1");
+    expect(persisted?.record.patient.name?.value).toBe("Ana");
+    expect(persisted?.findings).toHaveLength(1);
+    expect(persisted?.indexed.patientName).toBe("Ana");
+
+    const recordIds = collectDocumentIds(persisted?.record);
+    expect(recordIds.length).toBeGreaterThan(0);
+    expect(recordIds.every((id) => id === "d1")).toBe(true);
+    expect(recordIds.includes("")).toBe(false);
+
+    const findingIds = collectDocumentIds(persisted?.findings);
+    expect(findingIds.length).toBeGreaterThan(0);
+    expect(findingIds.every((id) => id === "d1")).toBe(true);
+  });
+
   test("skips non-data-bearing pages with a reason", async () => {
     const deps = makeDeps({
       classifyPage: () =>
@@ -153,6 +279,42 @@ describe("createProcessDocument", () => {
     expect(pages[0]?.status).toBe("skipped");
     expect(pages[0]?.skipReason).toBe(processing.notDataBearing);
     expect(pages[1]?.status).toBe("skipped");
+  });
+
+  test("errors with the no-extractable-text message and skips the provider", async () => {
+    const deps = makeDeps({
+      classifyPage: () =>
+        Promise.resolve({
+          docType: "other",
+          handwritten: false,
+          dataBearing: false,
+        }),
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const last = deps.updates.at(-1);
+    expect(last?.status).toBe("error");
+    expect(last?.error).toBe(errors.noExtractableText);
+    expect(deps.updates.map((update) => update.status)).not.toContain(
+      "extracting",
+    );
+    expect(deps.extractCalls).toHaveLength(0);
+    expect(deps.analyzeCalls).toHaveLength(0);
+    expect(deps.upserted).toHaveLength(0);
+  });
+
+  test("errors with the no-extractable-text message when every page fails", async () => {
+    const deps = makeDeps({
+      transcribePage: () => Promise.reject(new Error("ocr down")),
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const last = deps.updates.at(-1);
+    expect(last?.status).toBe("error");
+    expect(last?.error).toBe(errors.noExtractableText);
+    expect(deps.extractCalls).toHaveLength(0);
   });
 
   test("marks a failed page and keeps processing the rest", async () => {
@@ -174,6 +336,36 @@ describe("createProcessDocument", () => {
       "extracting",
       "ready",
     ]);
+  });
+
+  test("persists empty findings and stays ready when analysis fails", async () => {
+    const deps = makeDeps({ analyzeError: new Error("analysis down") });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.updates.map((update) => update.status)).toEqual([
+      "processing",
+      "extracting",
+      "ready",
+    ]);
+    expect(deps.upserted).toHaveLength(1);
+    expect(deps.upserted[0]?.findings).toEqual([]);
+    expect(
+      deps.errorEvents.some((event) => event.event === "findings_failed"),
+    ).toBe(true);
+  });
+
+  test("fails the document when the extracted record is invalid", async () => {
+    const invalid = emptyClinicalRecord();
+    invalid.patient.age = { value: 60, sources: [] };
+    const deps = makeDeps({ record: invalid });
+
+    await expect(deps.processDocument({ documentId: "d1" })).rejects.toThrow();
+
+    const last = deps.updates.at(-1);
+    expect(last?.status).toBe("error");
+    expect(last?.error).toBe(errors.processingFailed);
+    expect(deps.upserted).toHaveLength(0);
   });
 
   test("marks the document as error and rethrows when rendering fails", async () => {

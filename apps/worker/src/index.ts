@@ -1,4 +1,6 @@
+import { OpenAIProvider } from "@audit/ai";
 import {
+  createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
   getDb,
@@ -36,6 +38,11 @@ async function main(): Promise<void> {
       apiKey: env.OPENAI_API_KEY,
       model: env.OCR_MODEL,
     }),
+    provider: new OpenAIProvider({
+      apiKey: env.OPENAI_API_KEY,
+      model: env.LLM_MODEL,
+    }),
+    clinicalRecords: createClinicalRecordRepository(db),
     logger,
   });
 

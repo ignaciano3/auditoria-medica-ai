@@ -8,6 +8,10 @@ export {
   type MapExtractOptions,
 } from "./extraction/map-extract.ts";
 export { reduceRecords } from "./extraction/reduce-record.ts";
+export {
+  stampFindingProvenance,
+  stampProvenance,
+} from "./extraction/stamp-provenance.ts";
 export type { LLMProvider } from "./llm-provider.ts";
 export {
   ANALYSIS_CORRECTION_PROMPT,

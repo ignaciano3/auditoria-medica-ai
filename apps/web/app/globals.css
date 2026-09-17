@@ -197,3 +197,27 @@ a {
   height: auto;
   margin: 0 auto;
 }
+
+.record-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.record-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+}
+
+.record-fields dt {
+  font-weight: 600;
+}
+
+.record-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

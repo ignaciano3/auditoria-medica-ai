@@ -30,6 +30,7 @@ export const errors = {
   uploadFailed: "No se pudo subir el archivo.",
   notFound: "No se encontró el documento.",
   processingFailed: "No se pudo procesar el documento.",
+  noExtractableText: "No se pudo extraer texto de ninguna página.",
 } as const;
 
 export function pageIndicator(page: number, total: number): string {
@@ -39,6 +40,26 @@ export function pageIndicator(page: number, total: number): string {
 export function pageImageAlt(page: number): string {
   return `Página ${page} del documento`;
 }
+
+export function failedPagesIndicator(pages: number[]): string {
+  return `Páginas con error: ${pages.join(", ")}`;
+}
+
+export const clinicalRecord = {
+  patient: "Paciente",
+  age: "Edad",
+  sex: "Sexo",
+  hospitalization: "Internación",
+  admissionDate: "Fecha de ingreso",
+  dischargeDate: "Fecha de alta",
+  reason: "Motivo de ingreso",
+  diagnoses: "Diagnósticos",
+  medications: "Medicaciones",
+  laboratory: "Laboratorio",
+  studies: "Estudios",
+  microbiology: "Microbiología",
+  noInfo: "No se encontró información suficiente",
+} as const;
 
 export const processing = {
   flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",

@@ -1,5 +1,11 @@
 export { type Database, getDb } from "./client.ts";
 export {
+  type ClinicalRecordIndex,
+  type ClinicalRecordRow,
+  type ClinicalRecordWithFindings,
+  createClinicalRecordRepository,
+} from "./repositories/clinical-records.ts";
+export {
   createDocumentPageRepository,
   type DocumentPageRow,
 } from "./repositories/document-pages.ts";

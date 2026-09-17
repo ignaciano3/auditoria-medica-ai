@@ -1,15 +1,32 @@
 "use client";
 
-import type { Document } from "@audit/domain";
+import type {
+  ClinicalRecord,
+  Document,
+  PageDocType,
+  PageStatus,
+} from "@audit/domain";
 import { ui } from "@audit/lib/i18n";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 
+type PageSummary = {
+  pageNumber: number;
+  status: PageStatus;
+  docType: PageDocType;
+};
+
 type DocumentState =
   | { kind: "loading" }
-  | { kind: "loaded"; document: Document }
+  | {
+      kind: "loaded";
+      document: Document;
+      record: ClinicalRecord | null;
+      pages: PageSummary[];
+    }
   | { kind: "error" };
 
 export default function DocumentDetailPage() {
@@ -32,9 +49,18 @@ export default function DocumentDetailPage() {
           cache: "no-store",
         });
         if (!response.ok) throw new Error("document request failed");
-        const payload = (await response.json()) as { document: Document };
+        const payload = (await response.json()) as {
+          document: Document;
+          record: ClinicalRecord | null;
+          pages: PageSummary[];
+        };
         if (!mountedRef.current) return;
-        setState({ kind: "loaded", document: payload.document });
+        setState({
+          kind: "loaded",
+          document: payload.document,
+          record: payload.record,
+          pages: payload.pages,
+        });
       } catch {
         if (!mountedRef.current) return;
         setState({ kind: "error" });
@@ -63,6 +89,9 @@ export default function DocumentDetailPage() {
 
   const doc = state.document;
   const pageCount = doc.pageCount;
+  const failedPages = state.pages
+    .filter((page) => page.status === "failed")
+    .map((page) => page.pageNumber);
 
   return (
     <main className="page">
@@ -74,6 +103,13 @@ export default function DocumentDetailPage() {
         <p className="error" role="alert">
           {doc.error}
         </p>
+      ) : null}
+      {state.record !== null ? (
+        <ClinicalRecordView
+          record={state.record}
+          incomplete={failedPages.length > 0}
+          failedPages={failedPages}
+        />
       ) : null}
       {pageCount !== null && pageCount > 0 ? (
         <PdfViewer documentId={doc.id} pageCount={pageCount} initialPage={1} />
