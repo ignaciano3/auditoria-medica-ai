@@ -13,5 +13,13 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --pass-with-no-tests"
+  },
+  "dependencies": {
+    "@audit/domain": "workspace:*",
+    "openai": "^7.17.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2"
   }
 }

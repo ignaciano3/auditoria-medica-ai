@@ -1,0 +1,140 @@
+import { describe, expect, test } from "bun:test";
+import type { DocumentPage } from "@audit/domain";
+import {
+  LLMExtractionError,
+  type OpenAICompatibleClient,
+  OpenAIProvider,
+} from "../../index.ts";
+
+const page: DocumentPage = {
+  pageNumber: 1,
+  text: "texto",
+  docType: "evolution",
+  handwritten: false,
+  dataBearing: true,
+  status: "vision",
+};
+
+const validRecord = {
+  patient: {},
+  hospitalization: { diagnoses: [] },
+  history: { pathological: [], allergies: [], usualMedications: [] },
+  medications: [],
+  laboratory: [],
+  studies: [],
+  microbiology: [],
+  clinicalEvents: [],
+};
+
+const validFinding = {
+  id: "f1",
+  severity: "medium",
+  category: "temporal",
+  title: "Posible inconsistencia temporal",
+  explanation: "Las fechas no coinciden.",
+  evidence: [
+    {
+      source: { documentId: "d1", pageNumber: 1, text: "ingreso" },
+      relevance: "Fecha de ingreso documentada.",
+    },
+  ],
+  requiresHumanReview: true,
+};
+
+function sequencedClient(contents: Array<string | null>): {
+  client: OpenAICompatibleClient;
+  calls: () => number;
+} {
+  let calls = 0;
+  const client: OpenAICompatibleClient = {
+    chat: {
+      completions: {
+        create: async () => {
+          const index = Math.min(calls, contents.length - 1);
+          calls += 1;
+          return {
+            choices: [{ message: { content: contents[index] ?? null } }],
+          };
+        },
+      },
+    },
+  };
+  return { client, calls: () => calls };
+}
+
+function provider(client: OpenAICompatibleClient): OpenAIProvider {
+  return new OpenAIProvider({ apiKey: "t", model: "gpt-4.1", client });
+}
+
+describe("OpenAIProvider.extractClinicalRecord", () => {
+  test("retries once when the first response is invalid, then validates", async () => {
+    const fake = sequencedClient(["not json", JSON.stringify(validRecord)]);
+    const record = await provider(fake.client).extractClinicalRecord([page]);
+    expect(fake.calls()).toBe(2);
+    expect(record.hospitalization.diagnoses).toEqual([]);
+  });
+
+  test("throws a typed error after two invalid responses without leaking clinical text", async () => {
+    const sentinel = "PHI-SENTINEL-1234";
+    const fake = sequencedClient([`${sentinel} not json`, sentinel]);
+    const call = provider(fake.client).extractClinicalRecord([page]);
+    await expect(call).rejects.toBeInstanceOf(LLMExtractionError);
+    expect(fake.calls()).toBe(2);
+    try {
+      await call;
+    } catch (error) {
+      expect((error as Error).message).not.toContain(sentinel);
+    }
+  });
+});
+
+describe("OpenAIProvider.analyzeClinicalRecord", () => {
+  const record = validRecord as Parameters<
+    OpenAIProvider["analyzeClinicalRecord"]
+  >[0];
+
+  test("retries once when the first findings response is invalid", async () => {
+    const fake = sequencedClient([
+      JSON.stringify({ findings: [] }),
+      JSON.stringify([validFinding]),
+    ]);
+    const findings = await provider(fake.client).analyzeClinicalRecord(record);
+    expect(fake.calls()).toBe(2);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.requiresHumanReview).toBe(true);
+  });
+
+  test("throws a typed error after two invalid findings responses", async () => {
+    const fake = sequencedClient(["{}", "not json"]);
+    const call = provider(fake.client).analyzeClinicalRecord(record);
+    await expect(call).rejects.toBeInstanceOf(LLMExtractionError);
+    expect(fake.calls()).toBe(2);
+  });
+});
+
+describe("OpenAIProvider summaries", () => {
+  const record = validRecord as Parameters<
+    OpenAIProvider["generateClinicalSummary"]
+  >[0];
+
+  test("returns the model clinical summary text", async () => {
+    const fake = sequencedClient(["Resumen clínico en español."]);
+    const summary = await provider(fake.client).generateClinicalSummary(record);
+    expect(summary).toBe("Resumen clínico en español.");
+  });
+
+  test("returns the model audit summary text", async () => {
+    const fake = sequencedClient(["Resumen de auditoría en español."]);
+    const summary = await provider(fake.client).generateAuditSummary(
+      record,
+      [],
+    );
+    expect(summary).toBe("Resumen de auditoría en español.");
+  });
+
+  test("throws a typed error when a summary response is empty", async () => {
+    const fake = sequencedClient([null]);
+    const call = provider(fake.client).generateClinicalSummary(record);
+    await expect(call).rejects.toBeInstanceOf(LLMExtractionError);
+  });
+});
