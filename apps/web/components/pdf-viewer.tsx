@@ -2,7 +2,11 @@
 
 import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
 import { useState } from "react";
-import { clampPage } from "./pdf-viewer-utils.ts";
+import {
+  clampPage,
+  type PageTranscriptInput,
+  pageTranscript,
+} from "./pdf-viewer-utils.ts";
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
@@ -12,10 +16,12 @@ export function PdfViewer({
   documentId,
   pageCount,
   initialPage,
+  pages,
 }: {
   documentId: string;
   pageCount: number;
   initialPage: number;
+  pages: PageTranscriptInput[];
 }) {
   const [page, setPage] = useState(() => clampPage(initialPage, pageCount));
   const [zoom, setZoom] = useState(1);
@@ -25,6 +31,10 @@ export function PdfViewer({
   const canGoNext = currentPage < pageCount;
   const canZoomOut = zoom > MIN_ZOOM;
   const canZoomIn = zoom < MAX_ZOOM;
+
+  const transcript = pageTranscript(
+    pages.find((entry) => entry.pageNumber === currentPage),
+  );
 
   function goToPage(next: number) {
     setPage(clampPage(next, pageCount));
@@ -75,13 +85,27 @@ export function PdfViewer({
           +
         </button>
       </div>
-      <div className="overflow-auto rounded-lg border border-foreground/15 bg-foreground/5">
-        <img
-          className="mx-auto block h-auto max-w-none"
-          src={`/api/documents/${documentId}/pages/${currentPage}`}
-          alt={pageImageAlt(currentPage)}
-          style={{ width: `${zoom * 100}%` }}
-        />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="overflow-auto rounded-lg border border-foreground/15 bg-foreground/5">
+          <img
+            className="mx-auto block h-auto max-w-none"
+            src={`/api/documents/${documentId}/pages/${currentPage}`}
+            alt={pageImageAlt(currentPage)}
+            style={{ width: `${zoom * 100}%` }}
+          />
+        </div>
+        <aside className="flex flex-col gap-2 overflow-auto rounded-lg border border-foreground/15 bg-foreground/5 p-4 lg:max-h-[80vh]">
+          <h2 className="text-sm font-semibold text-foreground/70">
+            {ui.transcription}
+          </h2>
+          {transcript.kind === "text" ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
+              {transcript.text}
+            </p>
+          ) : (
+            <p className="text-sm text-foreground/60">{transcript.message}</p>
+          )}
+        </aside>
       </div>
     </section>
   );
