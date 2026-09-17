@@ -312,5 +312,12 @@ Out of scope:
   `docker/`.
 - `use cache` / ISR tuning, cache handlers, or partial prefetching.
 - Deleting or changing API route contracts; removing `force-dynamic` only.
-- Adopting `my-app` itself — `my-app` is a reference scaffold and is not
-  modified.
+
+## 12. Cleanup: remove the scaffold
+
+Once `apps/web` reaches parity and passes the verification in §10, delete the
+`apps/my-app` scaffold. It is an untracked reference copy used only to compare
+against current `create-next-app` standards; nothing in the monorepo depends on
+it. Removing it also requires no workspace, task, or lockfile changes (the
+`apps/*` glob simply stops matching it). This is the final step of the work.
+
