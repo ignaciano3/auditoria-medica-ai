@@ -29,6 +29,10 @@ export function DocumentList({
     };
   }, []);
 
+  useEffect(() => {
+    setState({ kind: "loaded", documents: initialDocuments });
+  }, [initialDocuments]);
+
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/documents", { cache: "no-store" });
