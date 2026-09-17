@@ -31,20 +31,22 @@ export function PdfViewer({
   }
 
   return (
-    <section className="pdf-viewer" data-page={currentPage}>
-      <div className="pdf-toolbar">
+    <section className="flex flex-col gap-3" data-page={currentPage}>
+      <div className="flex items-center gap-2">
         <button
           type="button"
+          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => goToPage(currentPage - 1)}
           disabled={!canGoPrevious}
         >
           {ui.previousPage}
         </button>
-        <span className="pdf-page-indicator" aria-live="polite">
+        <span className="flex-1 text-center" aria-live="polite">
           {pageIndicator(currentPage, pageCount)}
         </span>
         <button
           type="button"
+          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => goToPage(currentPage + 1)}
           disabled={!canGoNext}
         >
@@ -52,6 +54,7 @@ export function PdfViewer({
         </button>
         <button
           type="button"
+          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={ui.zoomOut}
           disabled={!canZoomOut}
           onClick={() =>
@@ -62,6 +65,7 @@ export function PdfViewer({
         </button>
         <button
           type="button"
+          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={ui.zoomIn}
           disabled={!canZoomIn}
           onClick={() =>
@@ -71,8 +75,9 @@ export function PdfViewer({
           +
         </button>
       </div>
-      <div className="pdf-page">
+      <div className="overflow-auto rounded-lg border border-foreground/15 bg-foreground/5">
         <img
+          className="mx-auto block h-auto max-w-none"
           src={`/api/documents/${documentId}/pages/${currentPage}`}
           alt={pageImageAlt(currentPage)}
           style={{ width: `${zoom * 100}%` }}

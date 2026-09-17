@@ -12,8 +12,10 @@ export default function DocumentDetailPage({
   params,
 }: PageProps<"/documents/[id]">) {
   return (
-    <main className="page">
-      <Suspense fallback={<output className="muted">{ui.loading}</output>}>
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
+      <Suspense
+        fallback={<output className="text-foreground/60">{ui.loading}</output>}
+      >
         <DocumentContent params={params} />
       </Suspense>
     </main>
@@ -41,12 +43,14 @@ async function DocumentContent({
 
   return (
     <>
-      <header className="document-header">
-        <h1>{doc.originalFilename}</h1>
+      <header className="flex items-center gap-3">
+        <h1 className="flex-1 [overflow-wrap:anywhere]">
+          {doc.originalFilename}
+        </h1>
         <DocumentStatusBadge status={doc.status} />
       </header>
       {doc.status === "error" && doc.error !== null ? (
-        <p className="error" role="alert">
+        <p className="text-[#d1242f]" role="alert">
           {doc.error}
         </p>
       ) : null}
@@ -61,7 +65,9 @@ async function DocumentContent({
       {pageCount !== null && pageCount > 0 ? (
         <PdfViewer documentId={doc.id} pageCount={pageCount} initialPage={1} />
       ) : (
-        <p className="muted">{pageCount === null ? ui.loading : ui.noPages}</p>
+        <p className="text-foreground/60">
+          {pageCount === null ? ui.loading : ui.noPages}
+        </p>
       )}
     </>
   );

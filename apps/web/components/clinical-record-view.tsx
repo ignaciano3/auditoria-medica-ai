@@ -40,9 +40,9 @@ export function ClinicalRecordView({
   const diagnoses = record.hospitalization.diagnoses;
 
   return (
-    <section className="record-view">
+    <section className="flex flex-col gap-6">
       {incomplete ? (
-        <div className="error" role="alert">
+        <div className="text-[#d1242f]" role="alert">
           <strong>{ui.incompleteAnalysis}</strong>
           {failedPages.length > 0 ? (
             <span> {failedPagesIndicator(failedPages)}</span>
@@ -53,85 +53,91 @@ export function ClinicalRecordView({
         </div>
       ) : null}
 
-      <section className="card">
-        <h2 className="card-title">{clinicalRecord.patient}</h2>
+      <section className="flex flex-col gap-2 rounded-lg border border-foreground/20 p-4">
+        <h2 className="text-base font-semibold">{clinicalRecord.patient}</h2>
         {hasPatient ? (
-          <dl className="record-fields">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
             {name !== undefined ? (
               <>
-                <dt>{clinicalRecord.patient}</dt>
+                <dt className="font-semibold">{clinicalRecord.patient}</dt>
                 <dd>{name}</dd>
               </>
             ) : null}
             {age !== undefined ? (
               <>
-                <dt>{clinicalRecord.age}</dt>
+                <dt className="font-semibold">{clinicalRecord.age}</dt>
                 <dd>{age}</dd>
               </>
             ) : null}
             {sex !== undefined ? (
               <>
-                <dt>{clinicalRecord.sex}</dt>
+                <dt className="font-semibold">{clinicalRecord.sex}</dt>
                 <dd>{sex}</dd>
               </>
             ) : null}
           </dl>
         ) : (
-          <p className="muted">{clinicalRecord.noInfo}</p>
+          <p className="text-foreground/60">{clinicalRecord.noInfo}</p>
         )}
       </section>
 
-      <section className="card">
-        <h2 className="card-title">{clinicalRecord.hospitalization}</h2>
+      <section className="flex flex-col gap-2 rounded-lg border border-foreground/20 p-4">
+        <h2 className="text-base font-semibold">
+          {clinicalRecord.hospitalization}
+        </h2>
         {hasHospitalization ? (
-          <dl className="record-fields">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
             {admissionDate !== undefined ? (
               <>
-                <dt>{clinicalRecord.admissionDate}</dt>
+                <dt className="font-semibold">
+                  {clinicalRecord.admissionDate}
+                </dt>
                 <dd>{admissionDate}</dd>
               </>
             ) : null}
             {dischargeDate !== undefined ? (
               <>
-                <dt>{clinicalRecord.dischargeDate}</dt>
+                <dt className="font-semibold">
+                  {clinicalRecord.dischargeDate}
+                </dt>
                 <dd>{dischargeDate}</dd>
               </>
             ) : null}
             {reason !== undefined ? (
               <>
-                <dt>{clinicalRecord.reason}</dt>
+                <dt className="font-semibold">{clinicalRecord.reason}</dt>
                 <dd>{reason}</dd>
               </>
             ) : null}
           </dl>
         ) : (
-          <p className="muted">{clinicalRecord.noInfo}</p>
+          <p className="text-foreground/60">{clinicalRecord.noInfo}</p>
         )}
       </section>
 
-      <section className="card">
-        <h2 className="card-title">{clinicalRecord.diagnoses}</h2>
+      <section className="flex flex-col gap-2 rounded-lg border border-foreground/20 p-4">
+        <h2 className="text-base font-semibold">{clinicalRecord.diagnoses}</h2>
         {diagnoses.length > 0 ? (
-          <ul className="record-list">
+          <ul className="flex list-disc flex-col gap-1 pl-5">
             {diagnoses.map((diagnosis) => (
               <li key={diagnosis.value}>{diagnosis.value}</li>
             ))}
           </ul>
         ) : (
-          <p className="muted">{clinicalRecord.noInfo}</p>
+          <p className="text-foreground/60">{clinicalRecord.noInfo}</p>
         )}
       </section>
 
-      <section className="card">
-        <h2 className="card-title">{ui.summary}</h2>
-        <dl className="record-fields">
-          <dt>{clinicalRecord.medications}</dt>
+      <section className="flex flex-col gap-2 rounded-lg border border-foreground/20 p-4">
+        <h2 className="text-base font-semibold">{ui.summary}</h2>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="font-semibold">{clinicalRecord.medications}</dt>
           <dd>{record.medications.length}</dd>
-          <dt>{clinicalRecord.laboratory}</dt>
+          <dt className="font-semibold">{clinicalRecord.laboratory}</dt>
           <dd>{record.laboratory.length}</dd>
-          <dt>{clinicalRecord.studies}</dt>
+          <dt className="font-semibold">{clinicalRecord.studies}</dt>
           <dd>{record.studies.length}</dd>
-          <dt>{clinicalRecord.microbiology}</dt>
+          <dt className="font-semibold">{clinicalRecord.microbiology}</dt>
           <dd>{record.microbiology.length}</dd>
         </dl>
       </section>
