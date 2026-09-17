@@ -2,6 +2,7 @@ import type {
   ClinicalRecord,
   DocumentStatus,
   Finding,
+  FindingReviewStatus,
   PageDocType,
   PageStatus,
 } from "@audit/domain";
@@ -84,18 +85,30 @@ export const clinicalRecords = pgTable(
   ],
 );
 
-export const findingsReview = pgTable("findings_review", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  findingId: text("finding_id").notNull(),
-  status: text("status").notNull().default("pending"),
-  note: text("note"),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const findingsReview = pgTable(
+  "findings_review",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    findingId: text("finding_id").notNull(),
+    status: text("status")
+      .$type<FindingReviewStatus>()
+      .notNull()
+      .default("pending"),
+    note: text("note"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("findings_review_document_finding_idx").on(
+      table.documentId,
+      table.findingId,
+    ),
+  ],
+);
 
 export const chatMessages = pgTable("chat_messages", {
   id: uuid("id").primaryKey().defaultRandom(),

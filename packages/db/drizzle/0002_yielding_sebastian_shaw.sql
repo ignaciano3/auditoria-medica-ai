@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "findings_review_document_finding_idx" ON "findings_review" USING btree ("document_id","finding_id");

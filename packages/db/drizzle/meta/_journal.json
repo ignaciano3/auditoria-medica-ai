@@ -15,6 +15,13 @@
       "when": 1789606020817,
       "tag": "0001_cloudy_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789617805823,
+      "tag": "0002_yielding_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

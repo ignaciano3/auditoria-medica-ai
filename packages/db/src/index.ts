@@ -15,6 +15,10 @@ export {
   type DocumentRow,
 } from "./repositories/documents.ts";
 export {
+  createFindingReviewRepository,
+  type FindingReview,
+} from "./repositories/finding-reviews.ts";
+export {
   accessLog,
   chatMessages,
   clinicalRecords,
