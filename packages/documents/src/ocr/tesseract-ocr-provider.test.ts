@@ -46,6 +46,41 @@ describe("TesseractOCRProvider", () => {
     expect(calls[0]?.options.lang).toBe("spa");
   });
 
+  test("uses automatic page segmentation with orientation detection", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const provider = new TesseractOCRProvider({
+      classifier: fakeClassifier({
+        docType: "lab",
+        handwritten: false,
+        dataBearing: true,
+      }),
+      recognize: async (_image, options) => {
+        calls.push(options ?? {});
+        return "text";
+      },
+    });
+    await provider.transcribePage(page);
+    expect(calls[0]?.psm).toBe(1);
+  });
+
+  test("allows overriding the page segmentation mode", async () => {
+    const calls: Record<string, unknown>[] = [];
+    const provider = new TesseractOCRProvider({
+      classifier: fakeClassifier({
+        docType: "lab",
+        handwritten: false,
+        dataBearing: true,
+      }),
+      recognize: async (_image, options) => {
+        calls.push(options ?? {});
+        return "text";
+      },
+      psm: 6,
+    });
+    await provider.transcribePage(page);
+    expect(calls[0]?.psm).toBe(6);
+  });
+
   test("delegates classification to the injected classifier", async () => {
     const classifier = fakeClassifier({
       docType: "lab",

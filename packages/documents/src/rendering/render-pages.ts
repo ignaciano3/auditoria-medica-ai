@@ -1,6 +1,7 @@
 import * as mupdf from "mupdf";
 
-export const DEFAULT_RENDER_SCALE = 1.5;
+export const DEFAULT_RENDER_DPI = 300;
+export const DEFAULT_RENDER_SCALE = DEFAULT_RENDER_DPI / 72;
 
 export function inspectPdf(bytes: Uint8Array): { pageCount: number } {
   const doc = mupdf.Document.openDocument(bytes, "application/pdf");
