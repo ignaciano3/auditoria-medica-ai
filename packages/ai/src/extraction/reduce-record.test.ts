@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Source } from "@audit/domain";
+import type { ExtractedValue, Source } from "@audit/domain";
 import { emptyClinicalRecord } from "./map-extract.ts";
 import { reduceRecords } from "./reduce-record.ts";
 
@@ -8,6 +8,28 @@ const source = (page: number, text: string): Source => ({
   pageNumber: page,
   text,
 });
+
+const extracted = <T>(value: T, page: number): ExtractedValue<T> => ({
+  value,
+  sources: [source(page, "text")],
+});
+
+function keyPaths(value: unknown, prefix = ""): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      keyPaths(item, `${prefix}[${index}]`),
+    );
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(
+      ([key, child]) => {
+        const path = prefix === "" ? key : `${prefix}.${key}`;
+        return [path, ...keyPaths(child, path)];
+      },
+    );
+  }
+  return [];
+}
 
 describe("reduceRecords", () => {
   test("dedupes identical diagnoses but keeps conflicting admission dates", () => {
@@ -196,5 +218,173 @@ describe("reduceRecords", () => {
 
   test("returns an empty record for an empty input", () => {
     expect(reduceRecords([])).toEqual(emptyClinicalRecord());
+  });
+
+  test("treats an empty value as absent when choosing the first singular value", () => {
+    const a = emptyClinicalRecord();
+    a.patient.name = { value: "   ", sources: [source(1, "blank")] };
+    a.hospitalization.admissionDate = {
+      value: "",
+      sources: [source(1, "blank")],
+    };
+
+    const b = emptyClinicalRecord();
+    b.patient.name = { value: "Ana", sources: [source(2, "ana")] };
+    b.hospitalization.admissionDate = {
+      value: "13/02/2026",
+      sources: [source(2, "ingreso")],
+    };
+
+    const merged = reduceRecords([a, b]);
+    const reversed = reduceRecords([b, a]);
+
+    expect(merged.patient.name?.value).toBe("Ana");
+    expect(merged.hospitalization.admissionDate?.value).toBe("13/02/2026");
+    expect(merged.hospitalization.admissionDateConflicts).toEqual([]);
+    expect(reversed.patient.name?.value).toBe("Ana");
+    expect(reversed.hospitalization.admissionDate?.value).toBe("13/02/2026");
+  });
+
+  test("does not mutate its inputs when a singular value is merged", () => {
+    const a = emptyClinicalRecord();
+    a.patient.name = { value: "Ana", sources: [source(1, "ana")] };
+
+    const merged = reduceRecords([a]);
+    merged.patient.name?.sources.push(source(9, "extra"));
+
+    expect(a.patient.name?.sources).toHaveLength(1);
+  });
+
+  test("keeps clinical events that differ only by date", () => {
+    const a = emptyClinicalRecord();
+    a.clinicalEvents = [
+      {
+        date: "01/02/2026",
+        type: "admission",
+        description: "Ingreso",
+        sources: [source(1, "e1")],
+      },
+    ];
+
+    const b = emptyClinicalRecord();
+    b.clinicalEvents = [
+      {
+        date: "02/02/2026",
+        type: "admission",
+        description: "Ingreso",
+        sources: [source(2, "e2")],
+      },
+      {
+        date: "01/02/2026",
+        type: "admission",
+        description: " INGRESO ",
+        sources: [source(2, "e3")],
+      },
+    ];
+
+    const merged = reduceRecords([a, b]);
+
+    expect(merged.clinicalEvents).toHaveLength(2);
+    expect(merged.clinicalEvents[0]?.date).toBe("01/02/2026");
+    expect(merged.clinicalEvents[0]?.sources).toHaveLength(2);
+    expect(merged.clinicalEvents[1]?.date).toBe("02/02/2026");
+  });
+
+  test("retains every field present in a fully populated record", () => {
+    const full = emptyClinicalRecord();
+    full.patient = {
+      name: extracted("Ana", 1),
+      age: extracted(40, 1),
+      sex: extracted("F", 1),
+      birthDate: extracted("01/01/1986", 1),
+    };
+    full.hospitalization = {
+      admissionDate: extracted("13/02/2026", 1),
+      dischargeDate: extracted("20/02/2026", 1),
+      reason: extracted("Dolor", 1),
+      diagnoses: [extracted("Sepsis", 1)],
+      dischargeDiagnosis: extracted("Mejoría", 1),
+      admissionDateConflicts: [],
+      dischargeDateConflicts: [],
+    };
+    full.history = {
+      pathological: [extracted("HTA", 1)],
+      allergies: [extracted("Penicilina", 1)],
+      usualMedications: [
+        {
+          name: extracted("Enalapril", 1),
+          dose: extracted("10 mg", 1),
+          sources: [source(1, "med")],
+        },
+      ],
+    };
+    full.medications = [
+      {
+        name: extracted("Paracetamol", 1),
+        dose: extracted("1 g", 1),
+        route: extracted("oral", 1),
+        frequency: extracted("cada 8 h", 1),
+        startDate: extracted("13/02/2026", 1),
+        endDate: extracted("15/02/2026", 1),
+        status: "active",
+        sources: [source(1, "med")],
+      },
+    ];
+    full.laboratory = [
+      {
+        date: extracted("13/02/2026", 1),
+        name: extracted("Leucocitos", 1),
+        value: extracted("12000", 1),
+        unit: extracted("/mm3", 1),
+        referenceRange: extracted("4000-10000", 1),
+        sources: [source(1, "lab")],
+      },
+    ];
+    full.studies = [
+      {
+        date: extracted("13/02/2026", 1),
+        type: extracted("Radiografía", 1),
+        indication: extracted("Fiebre", 1),
+        result: extracted("Normal", 1),
+        sources: [source(1, "study")],
+      },
+    ];
+    full.microbiology = [
+      {
+        date: extracted("14/02/2026", 1),
+        sample: extracted("Sangre", 1),
+        organism: extracted("E. coli", 1),
+        result: extracted("Positivo", 1),
+        sensitivity: extracted("Sensible", 1),
+        sources: [source(1, "micro")],
+      },
+    ];
+    full.clinicalEvents = [
+      {
+        date: "13/02/2026",
+        type: "admission",
+        description: "Ingreso",
+        sources: [source(1, "event")],
+      },
+    ];
+    full.discharge = {
+      date: extracted("20/02/2026", 1),
+      conditionAtDischarge: extracted("Estable", 1),
+      diagnosis: extracted("Neumonía", 1),
+      treatment: extracted("Antibióticos", 1),
+      instructions: extracted("Control", 1),
+      warningSigns: extracted("Fiebre", 1),
+      followUp: extracted("Consultorio", 1),
+    };
+
+    const merged = reduceRecords([full, emptyClinicalRecord()]);
+    const mergedPaths = new Set(keyPaths(merged));
+
+    for (const path of keyPaths(full)) {
+      expect(mergedPaths.has(path)).toBe(true);
+    }
+    for (const path of keyPaths(emptyClinicalRecord())) {
+      expect(mergedPaths.has(path)).toBe(true);
+    }
   });
 });

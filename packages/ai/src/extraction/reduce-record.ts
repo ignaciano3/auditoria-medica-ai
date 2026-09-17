@@ -22,6 +22,10 @@ function sourceKey(source: Source): string {
   return `${source.documentId}#${source.pageNumber}`;
 }
 
+function hasContent(item: ExtractedValue<unknown>): boolean {
+  return normalize(item.value) !== "";
+}
+
 function unionSources(lists: readonly (readonly Source[])[]): Source[] {
   const seen = new Set<string>();
   const merged: Source[] = [];
@@ -69,9 +73,9 @@ function mergeSingular<T>(
   let merged: ExtractedValue<T> | undefined;
   for (const record of records) {
     const item = select(record);
-    if (item === undefined) continue;
+    if (item === undefined || !hasContent(item)) continue;
     if (merged === undefined) {
-      merged = item;
+      merged = { ...item, sources: [...item.sources] };
       continue;
     }
     if (normalize(merged.value) === normalize(item.value)) {
@@ -100,7 +104,7 @@ function mergeDateField(
   >();
   for (const record of records) {
     const item = select(record);
-    if (item === undefined) continue;
+    if (item === undefined || !hasContent(item)) continue;
     const key = normalize(item.value);
     const entry = entries.get(key);
     if (entry !== undefined) {
@@ -171,7 +175,11 @@ function microbiologyKey(item: MicrobiologyResult): string {
 }
 
 function clinicalEventKey(item: ClinicalEvent): string {
-  return [item.date ?? "", item.type, normalize(item.description)].join("|");
+  return [
+    normalize(item.date ?? ""),
+    normalize(item.type),
+    normalize(item.description),
+  ].join("|");
 }
 
 function mergePatient(records: readonly ClinicalRecord[]): Patient {
