@@ -74,6 +74,43 @@ export const clinicalRecord = {
   noInfo: "No se encontró información suficiente",
 } as const;
 
+export const findings = {
+  empty: "No se encontraron hallazgos.",
+  emptyFilter: "No hay hallazgos con este filtro.",
+  reviewFailed: "No se pudo guardar la revisión.",
+  evidence: "Evidencia",
+  note: "Nota",
+  notePlaceholder: "Agregar una nota de revisión",
+  saveNote: "Guardar nota",
+  markPending: "Marcar como pendiente",
+  viewPage: (page: number) => `Ver página ${page}`,
+  filter: {
+    all: "Todos",
+    pending: "Pendientes",
+    reviewed: "Revisados",
+    dismissed: "Descartados",
+  },
+  status: {
+    pending: "Pendiente",
+    reviewed: "Revisado",
+    dismissed: "Descartado",
+  },
+  severity: {
+    high: "Alta",
+    medium: "Media",
+    low: "Baja",
+    info: "Informativa",
+  },
+  category: {
+    temporal: "Temporal",
+    contradiction: "Contradicción",
+    medication: "Medicación",
+    documentation: "Documentación",
+    audit: "Auditoría",
+    other: "Otro",
+  },
+} as const;
+
 export const processing = {
   flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",
   notDataBearing: "Página sin datos clínicos: no se extrae.",

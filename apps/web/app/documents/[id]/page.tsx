@@ -6,19 +6,21 @@ import { Suspense } from "react";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
 import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
+import { FindingsSection } from "../../../components/findings-section.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 import { getContainer } from "../../../lib/container.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
 export default function DocumentDetailPage({
   params,
+  searchParams,
 }: PageProps<"/documents/[id]">) {
   return (
     <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-3 py-6 sm:px-4">
       <Suspense
         fallback={<output className="text-foreground/60">{ui.loading}</output>}
       >
-        <DocumentContent params={params} />
+        <DocumentContent params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
@@ -26,22 +28,29 @@ export default function DocumentDetailPage({
 
 async function DocumentContent({
   params,
-}: Pick<PageProps<"/documents/[id]">, "params">) {
+  searchParams,
+}: Pick<PageProps<"/documents/[id]">, "params" | "searchParams">) {
   const { id } = await params;
+  const query = await searchParams;
   await io();
   const container = getContainer();
   const row = await container.documents.getById(id);
   if (!row) notFound();
 
-  const [clinical, pages] = await Promise.all([
+  const [clinical, pages, reviews] = await Promise.all([
     container.clinicalRecords.getByDocument(id),
     container.pages.listForDocument(id),
+    container.findingReviews.listForDocument(id),
   ]);
   const doc = serializeDocument(row);
   const failedPages = pages
     .filter((page) => page.status === "failed")
     .map((page) => page.pageNumber);
   const pageCount = doc.pageCount;
+
+  const pageParam = Array.isArray(query.page) ? query.page[0] : query.page;
+  const parsedPage = Number.parseInt(pageParam ?? "1", 10);
+  const initialPage = Number.isFinite(parsedPage) ? parsedPage : 1;
 
   return (
     <>
@@ -75,11 +84,18 @@ async function DocumentContent({
           failedChunks={clinical.failedChunkCount}
         />
       ) : null}
+      {clinical !== null ? (
+        <FindingsSection
+          documentId={doc.id}
+          findings={clinical.findings}
+          reviews={reviews}
+        />
+      ) : null}
       {pageCount !== null && pageCount > 0 ? (
         <PdfViewer
           documentId={doc.id}
           pageCount={pageCount}
-          initialPage={1}
+          initialPage={initialPage}
           pages={pages}
         />
       ) : (

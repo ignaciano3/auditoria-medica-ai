@@ -1,7 +1,7 @@
 "use client";
 
 import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   clampPage,
   type PageTranscriptInput,
@@ -25,6 +25,10 @@ export function PdfViewer({
 }) {
   const [page, setPage] = useState(() => clampPage(initialPage, pageCount));
   const [zoom, setZoom] = useState(1);
+
+  useEffect(() => {
+    setPage(clampPage(initialPage, pageCount));
+  }, [initialPage, pageCount]);
 
   const currentPage = clampPage(page, pageCount);
   const canGoPrevious = currentPage > 1;

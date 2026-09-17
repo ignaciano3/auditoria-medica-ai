@@ -6,6 +6,7 @@ export {
   errors,
   failedChunksIndicator,
   failedPagesIndicator,
+  findings,
   pageDocTypeLabels,
   pageImageAlt,
   pageIndicator,
