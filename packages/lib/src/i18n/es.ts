@@ -33,6 +33,9 @@ export const errors = {
   noExtractableText: "No se pudo extraer texto de ninguna página.",
   extractionFailed: "No se pudo extraer información del documento.",
   deleteFailed: "No se pudo eliminar el documento.",
+  invalidFinding: "Hallazgo no válido.",
+  invalidReviewStatus: "Estado de revisión no válido.",
+  noteTooLong: "La nota no puede superar los 2000 caracteres.",
 } as const;
 
 export function deleteConfirm(filename: string): string {
