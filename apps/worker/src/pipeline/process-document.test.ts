@@ -495,4 +495,55 @@ describe("createProcessDocument", () => {
     expect(last?.error).toBe(errors.processingFailed);
     expect(deps.saved).toHaveLength(0);
   });
+
+  test("assigns stable content-derived finding ids across runs", async () => {
+    const first = makeDeps({});
+    const second = makeDeps({});
+
+    await first.processDocument({ documentId: "d1" });
+    await second.processDocument({ documentId: "d1" });
+
+    const firstIds = first.upserted[0]?.findings.map((finding) => finding.id);
+    const secondIds = second.upserted[0]?.findings.map((finding) => finding.id);
+
+    expect(firstIds).toHaveLength(1);
+    expect(firstIds?.[0]?.startsWith("fnd-")).toBe(true);
+    expect(firstIds).toEqual(secondIds);
+  });
+
+  test("does not depend on the order findings come back from the provider", async () => {
+    const alpha: Finding = {
+      id: "provider-a",
+      severity: "high",
+      category: "temporal",
+      title: "Alfa",
+      explanation: "e",
+      evidence: [{ source: ghostSource(1, "a"), relevance: "r" }],
+      requiresHumanReview: true,
+    };
+    const beta: Finding = {
+      id: "provider-b",
+      severity: "low",
+      category: "medication",
+      title: "Beta",
+      explanation: "e",
+      evidence: [{ source: ghostSource(2, "b"), relevance: "r" }],
+      requiresHumanReview: true,
+    };
+
+    const forward = makeDeps({ findings: [alpha, beta] });
+    const backward = makeDeps({ findings: [beta, alpha] });
+
+    await forward.processDocument({ documentId: "d1" });
+    await backward.processDocument({ documentId: "d1" });
+
+    const forwardIds = (forward.upserted[0]?.findings ?? [])
+      .map((finding) => finding.id)
+      .sort();
+    const backwardIds = (backward.upserted[0]?.findings ?? [])
+      .map((finding) => finding.id)
+      .sort();
+
+    expect(forwardIds).toEqual(backwardIds);
+  });
 });

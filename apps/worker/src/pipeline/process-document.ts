@@ -13,6 +13,7 @@ import {
   renderPdfPages,
 } from "@audit/documents";
 import {
+  assignStableFindingIds,
   type ClinicalRecord,
   clinicalRecordSchema,
   type DocumentPage,
@@ -255,6 +256,7 @@ export function createProcessDocument(
         logger.error({ event: "findings_failed", documentId });
       }
       findings = stampFindingProvenance(findings, documentId);
+      findings = assignStableFindingIds(findings);
 
       const indexed: ClinicalRecordIndex = {};
       if (validated.patient.name !== undefined) {
