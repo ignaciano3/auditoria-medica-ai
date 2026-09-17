@@ -110,6 +110,7 @@ export const clinicalRecord = {
   sensitivity: "Sensibilidad",
   evidence: "Evidencia",
   noInfo: "No se encontró información suficiente",
+  invalidValue: "inválido",
 } as const;
 
 export const findings = {

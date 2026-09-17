@@ -8,6 +8,7 @@ import type {
 import {
   countsBySection,
   displayValue,
+  isPlaceholderValue,
   labResultItemKey,
   medicationItemKey,
   mergeSourcePages,
@@ -73,6 +74,30 @@ describe("list item keys", () => {
     expect(labResultItemKey(result(), 0)).not.toBe(
       labResultItemKey(result(), 1),
     );
+  });
+});
+
+describe("isPlaceholderValue", () => {
+  test("treats punctuation-only strings as placeholders", () => {
+    expect(isPlaceholderValue(".")).toBe(true);
+    expect(isPlaceholderValue(",")).toBe(true);
+    expect(isPlaceholderValue("-")).toBe(true);
+    expect(isPlaceholderValue("—")).toBe(true);
+    expect(isPlaceholderValue("..")).toBe(true);
+    expect(isPlaceholderValue(" , ")).toBe(true);
+  });
+
+  test("keeps values with letters or digits", () => {
+    expect(isPlaceholderValue("134,0")).toBe(false);
+    expect(isPlaceholderValue("SODIO")).toBe(false);
+    expect(isPlaceholderValue("0")).toBe(false);
+    expect(isPlaceholderValue("N/A")).toBe(false);
+    expect(isPlaceholderValue("mg/dl")).toBe(false);
+  });
+
+  test("does not treat empty or blank strings as placeholders", () => {
+    expect(isPlaceholderValue("")).toBe(false);
+    expect(isPlaceholderValue("   ")).toBe(false);
   });
 });
 

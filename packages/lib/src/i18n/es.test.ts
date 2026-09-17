@@ -85,6 +85,10 @@ describe("clinicalRecord full-view labels", () => {
       "Revisar la documentación original",
     );
   });
+
+  test("labels invalid placeholder values", () => {
+    expect(clinicalRecord.invalidValue).toBe("inválido");
+  });
 });
 
 describe("medicationStatusLabels", () => {

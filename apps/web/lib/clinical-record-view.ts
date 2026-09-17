@@ -13,6 +13,12 @@ export function displayValue(
   return text === "" ? undefined : text;
 }
 
+export function isPlaceholderValue(value: string): boolean {
+  const text = value.trim();
+  if (text === "") return false;
+  return !/[\p{L}\p{N}]/u.test(text);
+}
+
 export function medicationItemKey(
   medication: Medication,
   index: number,

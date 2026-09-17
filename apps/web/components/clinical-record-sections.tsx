@@ -23,6 +23,7 @@ import {
   type RecordFieldSpec,
   RecordFields,
   RecordItem,
+  RecordValue,
 } from "./clinical-record-primitives.tsx";
 import { EvidenceLinks } from "./evidence-link.tsx";
 
@@ -94,7 +95,7 @@ function DateConflicts({
             key={conflict.value}
             className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
           >
-            <span>{conflict.value}</span>
+            <RecordValue value={conflict.value} />
             <EvidenceLinks
               documentId={documentId}
               pages={sourcePages(conflict.sources)}
@@ -166,7 +167,7 @@ export function HospitalizationSection({
                     key={diagnosis.value}
                     className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                   >
-                    <span>{diagnosis.value}</span>
+                    <RecordValue value={diagnosis.value} />
                     <EvidenceLinks
                       documentId={documentId}
                       pages={sourcePages(diagnosis.sources)}
@@ -293,7 +294,7 @@ export function HistorySection({
                       key={`${group.label}-${entry.value}`}
                       className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                     >
-                      <span>{entry.value}</span>
+                      <RecordValue value={entry.value} />
                       <EvidenceLinks
                         documentId={documentId}
                         pages={sourcePages(entry.sources)}

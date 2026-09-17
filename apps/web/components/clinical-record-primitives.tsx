@@ -1,7 +1,11 @@
 import type { Source } from "@audit/domain";
 import { clinicalRecord } from "@audit/lib/i18n";
 import { Fragment, type ReactNode } from "react";
-import { displayValue, sourcePages } from "../lib/clinical-record-view.ts";
+import {
+  displayValue,
+  isPlaceholderValue,
+  sourcePages,
+} from "../lib/clinical-record-view.ts";
 import { EvidenceLinks } from "./evidence-link.tsx";
 
 export type RecordFieldSpec = {
@@ -9,6 +13,19 @@ export type RecordFieldSpec = {
   value: string | number | undefined;
   sources: Source[];
 };
+
+export function RecordValue({ value }: { value: string | number | undefined }) {
+  const text = displayValue(value);
+  if (text === undefined) return null;
+  if (isPlaceholderValue(text)) {
+    return (
+      <span className="font-semibold text-[#9a6700]">
+        {clinicalRecord.invalidValue}
+      </span>
+    );
+  }
+  return <span>{text}</span>;
+}
 
 export function CollapsibleSection({
   title,
@@ -55,7 +72,7 @@ export function RecordField({
     <>
       <dt className="font-semibold text-foreground/70">{label}</dt>
       <dd className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]">
-        <span>{text}</span>
+        <RecordValue value={value} />
         {showEvidence ? (
           <EvidenceLinks documentId={documentId} pages={sourcePages(sources)} />
         ) : null}
