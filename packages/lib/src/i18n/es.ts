@@ -31,6 +31,7 @@ export const errors = {
   notFound: "No se encontró el documento.",
   processingFailed: "No se pudo procesar el documento.",
   noExtractableText: "No se pudo extraer texto de ninguna página.",
+  extractionFailed: "No se pudo extraer información del documento.",
 } as const;
 
 export function pageIndicator(page: number, total: number): string {

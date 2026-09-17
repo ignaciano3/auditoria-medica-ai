@@ -33,6 +33,13 @@ type RenderedPage = {
   height: number;
 };
 
+export class ExtractionFailedError extends Error {
+  constructor() {
+    super("All extraction chunks failed");
+    this.name = "ExtractionFailedError";
+  }
+}
+
 type RenderPages = (bytes: Uint8Array) => Promise<RenderedPage[]>;
 
 export type ProcessingLogger = {
@@ -222,11 +229,16 @@ export function createProcessDocument(
       await deps.documents.updateStatus(documentId, "extracting");
 
       const chunks = chunkPages(processedPages);
+      let failedChunks = 0;
       const records = await mapExtract(chunks, deps.provider, {
         onChunkError: (chunkIndex) => {
+          failedChunks += 1;
           logger.error({ event: "chunk_failed", documentId, chunkIndex });
         },
       });
+      if (chunks.length > 0 && failedChunks === chunks.length) {
+        throw new ExtractionFailedError();
+      }
       const merged = stampProvenance(reduceRecords(records), documentId);
       const validated = clinicalRecordSchema.parse(merged) as ClinicalRecord;
 
@@ -259,8 +271,12 @@ export function createProcessDocument(
       logger.info({ event: "document_ready", documentId });
     } catch (error) {
       logger.error({ event: "document_failed", documentId });
+      const message =
+        error instanceof ExtractionFailedError
+          ? errors.extractionFailed
+          : errors.processingFailed;
       await deps.documents
-        .updateStatus(documentId, "error", errors.processingFailed)
+        .updateStatus(documentId, "error", message)
         .catch(() => undefined);
       throw error;
     }

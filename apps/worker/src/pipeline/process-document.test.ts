@@ -14,7 +14,10 @@ import type {
   Source,
 } from "@audit/domain";
 import { errors, processing } from "@audit/lib";
-import { createProcessDocument } from "./process-document.ts";
+import {
+  ExtractionFailedError,
+  createProcessDocument,
+} from "./process-document.ts";
 
 type Update = { status: DocumentStatus; error: string | null };
 
@@ -79,6 +82,17 @@ const defaultRender = () =>
     { pageNumber: 2, png: new Uint8Array([2]), width: 10, height: 10 },
   ]);
 
+function renderPageCount(count: number) {
+  return Promise.resolve(
+    Array.from({ length: count }, (_value, index) => ({
+      pageNumber: index + 1,
+      png: new Uint8Array([index]),
+      width: 10,
+      height: 10,
+    })),
+  );
+}
+
 function makeDeps(options: {
   render?: () => Promise<
     Array<{
@@ -95,6 +109,8 @@ function makeDeps(options: {
   record?: ClinicalRecord;
   findings?: Finding[];
   analyzeError?: Error;
+  extractError?: Error;
+  extractErrorCall?: number;
 }) {
   const updates: Update[] = [];
   const saved: DocumentPage[][] = [];
@@ -105,6 +121,7 @@ function makeDeps(options: {
   const upserted: Upserted[] = [];
   const extractCalls: DocumentPage[][] = [];
   const analyzeCalls: ClinicalRecord[] = [];
+  let extractCallIndex = 0;
 
   const base = new FakeLLMProvider({
     record: options.record ?? extractedRecord(),
@@ -112,7 +129,16 @@ function makeDeps(options: {
   });
   const provider: LLMProvider = {
     async extractClinicalRecord(pages) {
+      const callIndex = extractCallIndex;
+      extractCallIndex += 1;
       extractCalls.push(pages);
+      if (
+        options.extractError &&
+        (options.extractErrorCall === undefined ||
+          options.extractErrorCall === callIndex)
+      ) {
+        throw options.extractError;
+      }
       return base.extractClinicalRecord(pages);
     },
     async analyzeClinicalRecord(record) {
@@ -261,6 +287,44 @@ describe("createProcessDocument", () => {
     const findingIds = collectDocumentIds(persisted?.findings);
     expect(findingIds.length).toBeGreaterThan(0);
     expect(findingIds.every((id) => id === "d1")).toBe(true);
+  });
+
+  test("fails the document when every extraction chunk fails", async () => {
+    const deps = makeDeps({ extractError: new Error("chunk boom") });
+
+    await expect(deps.processDocument({ documentId: "d1" })).rejects.toThrow(
+      ExtractionFailedError,
+    );
+
+    expect(deps.updates.map((update) => update.status)).not.toContain("ready");
+    const last = deps.updates.at(-1);
+    expect(last?.status).toBe("error");
+    expect(last?.error).toBe(errors.extractionFailed);
+    expect(deps.extractCalls).toHaveLength(1);
+    expect(deps.analyzeCalls).toHaveLength(0);
+    expect(deps.upserted).toHaveLength(0);
+    expect(
+      deps.errorEvents.some((event) => event.event === "chunk_failed"),
+    ).toBe(true);
+  });
+
+  test("persists a partial record when only some chunks fail", async () => {
+    const deps = makeDeps({
+      render: () => renderPageCount(5),
+      extractError: new Error("chunk boom"),
+      extractErrorCall: 0,
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.extractCalls).toHaveLength(2);
+    expect(deps.updates.map((update) => update.status)).toEqual([
+      "processing",
+      "extracting",
+      "ready",
+    ]);
+    expect(deps.upserted).toHaveLength(1);
+    expect(deps.upserted[0]?.record.patient.name?.value).toBe("Ana");
   });
 
   test("skips non-data-bearing pages with a reason", async () => {

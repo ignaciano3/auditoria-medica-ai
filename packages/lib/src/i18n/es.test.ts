@@ -35,4 +35,10 @@ describe("clinicalRecord labels", () => {
       "No se pudo extraer texto de ninguna página.",
     );
   });
+
+  test("has the extraction-failed error", () => {
+    expect(errors.extractionFailed).toBe(
+      "No se pudo extraer información del documento.",
+    );
+  });
 });
