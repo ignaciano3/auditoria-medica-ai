@@ -66,14 +66,22 @@ maybe("clinical records repository", () => {
     });
     createdId = document.id;
 
-    await repo.upsert(document.id, record(), findings, {
-      patientName: "Ana",
-      admissionDate: "13/02/2026",
-    });
+    await repo.upsert(
+      document.id,
+      record(),
+      findings,
+      {
+        patientName: "Ana",
+        admissionDate: "13/02/2026",
+      },
+      { extractionIncomplete: false, failedChunkCount: 0 },
+    );
 
     const fetched = await repo.getByDocument(document.id);
     expect(fetched?.record).toEqual(record());
     expect(fetched?.findings).toEqual(findings);
+    expect(fetched?.extractionIncomplete).toBe(false);
+    expect(fetched?.failedChunkCount).toBe(0);
   });
 
   test("updates the existing record on the same document", async () => {
@@ -82,11 +90,19 @@ maybe("clinical records repository", () => {
       patient: { name: { value: "Ana María", sources: [source] } },
     };
 
-    await repo.upsert(createdId, updated, [], { patientName: "Ana María" });
+    await repo.upsert(
+      createdId,
+      updated,
+      [],
+      { patientName: "Ana María" },
+      { extractionIncomplete: true, failedChunkCount: 2 },
+    );
 
     const fetched = await repo.getByDocument(createdId);
     expect(fetched?.record.patient.name?.value).toBe("Ana María");
     expect(fetched?.findings).toEqual([]);
+    expect(fetched?.extractionIncomplete).toBe(true);
+    expect(fetched?.failedChunkCount).toBe(2);
   });
 
   test("returns null for an unknown document", async () => {

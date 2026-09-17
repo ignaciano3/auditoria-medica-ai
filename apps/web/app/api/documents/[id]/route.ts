@@ -23,6 +23,8 @@ export async function GET(
   return NextResponse.json({
     document: serializeDocument(row),
     record: clinical?.record ?? null,
+    extractionIncomplete: clinical?.extractionIncomplete ?? false,
+    failedChunkCount: clinical?.failedChunkCount ?? 0,
     pages: pages.map((page) => ({
       pageNumber: page.pageNumber,
       status: page.status,

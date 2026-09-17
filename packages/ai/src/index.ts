@@ -9,6 +9,7 @@ export {
 } from "./extraction/map-extract.ts";
 export { reduceRecords } from "./extraction/reduce-record.ts";
 export {
+  ProvenanceError,
   stampFindingProvenance,
   stampProvenance,
 } from "./extraction/stamp-provenance.ts";

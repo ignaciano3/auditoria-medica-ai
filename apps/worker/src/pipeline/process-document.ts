@@ -69,6 +69,10 @@ type ClinicalRecordsDependency = {
     record: ClinicalRecord,
     findings: Finding[],
     indexed: ClinicalRecordIndex,
+    extraction: {
+      extractionIncomplete: boolean;
+      failedChunkCount: number;
+    },
   ): Promise<void>;
 };
 
@@ -242,10 +246,12 @@ export function createProcessDocument(
       const merged = stampProvenance(reduceRecords(records), documentId);
       const validated = clinicalRecordSchema.parse(merged) as ClinicalRecord;
 
+      let extractionIncomplete = failedChunks > 0;
       let findings: Finding[] = [];
       try {
         findings = await deps.provider.analyzeClinicalRecord(validated);
       } catch {
+        extractionIncomplete = true;
         logger.error({ event: "findings_failed", documentId });
       }
       findings = stampFindingProvenance(findings, documentId);
@@ -266,6 +272,7 @@ export function createProcessDocument(
         validated,
         findings,
         indexed,
+        { extractionIncomplete, failedChunkCount: failedChunks },
       );
       await deps.documents.updateStatus(documentId, "ready");
       logger.info({ event: "document_ready", documentId });

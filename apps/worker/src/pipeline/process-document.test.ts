@@ -26,6 +26,10 @@ type Upserted = {
   record: ClinicalRecord;
   findings: Finding[];
   indexed: ClinicalRecordIndex;
+  extraction: {
+    extractionIncomplete: boolean;
+    failedChunkCount: number;
+  };
 };
 
 const evolution: PageClassification = {
@@ -189,8 +193,8 @@ function makeDeps(options: {
     },
     provider,
     clinicalRecords: {
-      upsert: (documentId, record, findings, indexed) => {
-        upserted.push({ documentId, record, findings, indexed });
+      upsert: (documentId, record, findings, indexed, extraction) => {
+        upserted.push({ documentId, record, findings, indexed, extraction });
         return Promise.resolve();
       },
     },
@@ -278,6 +282,10 @@ describe("createProcessDocument", () => {
     expect(persisted?.record.patient.name?.value).toBe("Ana");
     expect(persisted?.findings).toHaveLength(1);
     expect(persisted?.indexed.patientName).toBe("Ana");
+    expect(persisted?.extraction).toEqual({
+      extractionIncomplete: false,
+      failedChunkCount: 0,
+    });
 
     const recordIds = collectDocumentIds(persisted?.record);
     expect(recordIds.length).toBeGreaterThan(0);
@@ -325,6 +333,10 @@ describe("createProcessDocument", () => {
     ]);
     expect(deps.upserted).toHaveLength(1);
     expect(deps.upserted[0]?.record.patient.name?.value).toBe("Ana");
+    expect(deps.upserted[0]?.extraction).toEqual({
+      extractionIncomplete: true,
+      failedChunkCount: 1,
+    });
   });
 
   test("skips non-data-bearing pages with a reason", async () => {
@@ -414,6 +426,10 @@ describe("createProcessDocument", () => {
     ]);
     expect(deps.upserted).toHaveLength(1);
     expect(deps.upserted[0]?.findings).toEqual([]);
+    expect(deps.upserted[0]?.extraction).toEqual({
+      extractionIncomplete: true,
+      failedChunkCount: 0,
+    });
     expect(
       deps.errorEvents.some((event) => event.event === "findings_failed"),
     ).toBe(true);

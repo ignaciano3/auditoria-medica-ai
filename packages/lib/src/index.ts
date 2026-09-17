@@ -3,6 +3,7 @@ export {
   clinicalRecord,
   documentStatusLabels,
   errors,
+  failedChunksIndicator,
   failedPagesIndicator,
   pageDocTypeLabels,
   pageImageAlt,
@@ -16,7 +17,10 @@ export {
   PROCESS_DOCUMENT_JOB,
   type ProcessDocumentJob,
 } from "./queue/job-queue.ts";
-export { PgBossQueue } from "./queue/pg-boss-queue.ts";
+export {
+  PgBossQueue,
+  QueuePublishError,
+} from "./queue/pg-boss-queue.ts";
 export { InMemoryStorage } from "./storage/in-memory-storage.ts";
 export {
   type S3StorageOptions,

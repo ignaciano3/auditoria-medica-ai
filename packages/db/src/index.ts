@@ -4,6 +4,7 @@ export {
   type ClinicalRecordRow,
   type ClinicalRecordWithFindings,
   createClinicalRecordRepository,
+  type ExtractionCompleteness,
 } from "./repositories/clinical-records.ts";
 export {
   createDocumentPageRepository,

@@ -2,6 +2,7 @@
 
 import type { Document } from "@audit/domain";
 import { ui } from "@audit/lib/i18n";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DocumentStatusBadge } from "./document-status-badge.tsx";
 import { pollIntervalMs } from "./document-status.ts";
@@ -79,7 +80,9 @@ export function DocumentList({ refreshKey = 0 }: { refreshKey?: number }) {
     <ul className="document-list">
       {documents.map((doc) => (
         <li key={doc.id} className="document-item">
-          <span className="document-name">{doc.originalFilename}</span>
+          <Link className="document-name" href={`/documents/${doc.id}`}>
+            {doc.originalFilename}
+          </Link>
           <DocumentStatusBadge status={doc.status} />
           {doc.status === "ready" && doc.pageCount !== null ? (
             <span className="muted">

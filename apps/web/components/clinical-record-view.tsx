@@ -1,7 +1,12 @@
 "use client";
 
 import type { ClinicalRecord } from "@audit/domain";
-import { clinicalRecord, failedPagesIndicator, ui } from "@audit/lib/i18n";
+import {
+  clinicalRecord,
+  failedChunksIndicator,
+  failedPagesIndicator,
+  ui,
+} from "@audit/lib/i18n";
 
 function display(value: string | number | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -13,10 +18,12 @@ export function ClinicalRecordView({
   record,
   incomplete,
   failedPages,
+  failedChunks,
 }: {
   record: ClinicalRecord;
   incomplete: boolean;
   failedPages: number[];
+  failedChunks: number;
 }) {
   const name = display(record.patient.name?.value);
   const age = display(record.patient.age?.value);
@@ -41,6 +48,9 @@ export function ClinicalRecordView({
           <strong>{ui.incompleteAnalysis}</strong>
           {failedPages.length > 0 ? (
             <span> {failedPagesIndicator(failedPages)}</span>
+          ) : null}
+          {failedChunks > 0 ? (
+            <span> {failedChunksIndicator(failedChunks)}</span>
           ) : null}
         </div>
       ) : null}

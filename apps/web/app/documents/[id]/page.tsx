@@ -25,6 +25,8 @@ type DocumentState =
       kind: "loaded";
       document: Document;
       record: ClinicalRecord | null;
+      extractionIncomplete: boolean;
+      failedChunkCount: number;
       pages: PageSummary[];
     }
   | { kind: "error" };
@@ -52,6 +54,8 @@ export default function DocumentDetailPage() {
         const payload = (await response.json()) as {
           document: Document;
           record: ClinicalRecord | null;
+          extractionIncomplete: boolean;
+          failedChunkCount: number;
           pages: PageSummary[];
         };
         if (!mountedRef.current) return;
@@ -59,6 +63,8 @@ export default function DocumentDetailPage() {
           kind: "loaded",
           document: payload.document,
           record: payload.record,
+          extractionIncomplete: payload.extractionIncomplete,
+          failedChunkCount: payload.failedChunkCount,
           pages: payload.pages,
         });
       } catch {
@@ -107,8 +113,9 @@ export default function DocumentDetailPage() {
       {state.record !== null ? (
         <ClinicalRecordView
           record={state.record}
-          incomplete={failedPages.length > 0}
+          incomplete={state.extractionIncomplete || failedPages.length > 0}
           failedPages={failedPages}
+          failedChunks={state.failedChunkCount}
         />
       ) : null}
       {pageCount !== null && pageCount > 0 ? (

@@ -22,6 +22,28 @@ services:
     ports: ["9000:9000", "9001:9001"]
     volumes: ["minio:/data"]
 
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minio minio123; do sleep 1; done;
+      mc mb -p local/documents;
+      "
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["bun", "run", "--cwd", "packages/db", "db:migrate"]
+    environment:
+      DATABASE_URL: postgres://audit:audit@postgres:5432/audit
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   worker:
     build:
       context: ..
@@ -44,6 +66,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:

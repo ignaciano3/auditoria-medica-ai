@@ -46,6 +46,10 @@ export function failedPagesIndicator(pages: number[]): string {
   return `Páginas con error: ${pages.join(", ")}`;
 }
 
+export function failedChunksIndicator(failedChunks: number): string {
+  return `Fragmentos con error: ${failedChunks}`;
+}
+
 export const clinicalRecord = {
   patient: "Paciente",
   age: "Edad",

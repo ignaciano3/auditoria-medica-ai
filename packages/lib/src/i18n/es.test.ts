@@ -3,6 +3,7 @@ import {
   clinicalRecord,
   documentStatusLabels,
   errors,
+  failedChunksIndicator,
   failedPagesIndicator,
 } from "./es.ts";
 
@@ -28,6 +29,10 @@ describe("clinicalRecord labels", () => {
 
   test("formats failed page numbers", () => {
     expect(failedPagesIndicator([3, 5])).toBe("Páginas con error: 3, 5");
+  });
+
+  test("formats the failed chunk count", () => {
+    expect(failedChunksIndicator(2)).toBe("Fragmentos con error: 2");
   });
 
   test("has the no-extractable-text error", () => {

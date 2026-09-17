@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { Finding, Source } from "@audit/domain";
 import { emptyClinicalRecord } from "./map-extract.ts";
-import { stampFindingProvenance, stampProvenance } from "./stamp-provenance.ts";
+import {
+  ProvenanceError,
+  stampFindingProvenance,
+  stampProvenance,
+} from "./stamp-provenance.ts";
 
 const emptySource = (pageNumber: number, text: string): Source => ({
   documentId: "",
@@ -125,6 +129,10 @@ describe("stampProvenance", () => {
     expect(record.patient.name?.sources[0]?.documentId).toBe("");
     expect(record.medications[0]?.sources[0]?.documentId).toBe("");
   });
+
+  test("throws when a stamped source keeps an empty document id", () => {
+    expect(() => stampProvenance(fullRecord(), "")).toThrow(ProvenanceError);
+  });
 });
 
 describe("stampFindingProvenance", () => {
@@ -149,5 +157,21 @@ describe("stampFindingProvenance", () => {
     expect(stamped[0]?.evidence[0]?.source.documentId).toBe("job-1");
     expect(stamped[0]?.evidence[1]?.source.documentId).toBe("job-1");
     expect(findings[0]?.evidence[0]?.source.documentId).toBe("");
+  });
+
+  test("throws when stamped evidence keeps an empty document id", () => {
+    const findings: Finding[] = [
+      {
+        id: "f1",
+        severity: "high",
+        category: "contradiction",
+        title: "Título",
+        explanation: "Explicación",
+        evidence: [{ source: emptySource(2, "a"), relevance: "r1" }],
+        requiresHumanReview: true,
+      },
+    ];
+
+    expect(() => stampFindingProvenance(findings, "")).toThrow(ProvenanceError);
   });
 });

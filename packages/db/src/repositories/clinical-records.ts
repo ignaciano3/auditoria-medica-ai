@@ -9,11 +9,18 @@ export type ClinicalRecordIndex = {
   dischargeDate?: string;
 };
 
+export type ExtractionCompleteness = {
+  extractionIncomplete: boolean;
+  failedChunkCount: number;
+};
+
 export type ClinicalRecordRow = typeof clinicalRecords.$inferSelect;
 
 export type ClinicalRecordWithFindings = {
   record: ClinicalRecord;
   findings: Finding[];
+  extractionIncomplete: boolean;
+  failedChunkCount: number;
 };
 
 export function createClinicalRecordRepository(db: Database) {
@@ -23,28 +30,34 @@ export function createClinicalRecordRepository(db: Database) {
       record: ClinicalRecord,
       findings: Finding[],
       indexed: ClinicalRecordIndex,
+      extraction: ExtractionCompleteness,
     ): Promise<void> {
+      const values = {
+        documentId,
+        record,
+        findings,
+        patientName: indexed.patientName ?? null,
+        admissionDate: indexed.admissionDate ?? null,
+        dischargeDate: indexed.dischargeDate ?? null,
+        extractionIncomplete: extraction.extractionIncomplete,
+        failedChunkCount: extraction.failedChunkCount,
+      };
       await db.transaction(async (tx) => {
-        const [existing] = await tx
-          .select({ id: clinicalRecords.id })
-          .from(clinicalRecords)
-          .where(eq(clinicalRecords.documentId, documentId))
-          .limit(1);
-        const values = {
-          record,
-          findings,
-          patientName: indexed.patientName ?? null,
-          admissionDate: indexed.admissionDate ?? null,
-          dischargeDate: indexed.dischargeDate ?? null,
-        };
-        if (existing) {
-          await tx
-            .update(clinicalRecords)
-            .set(values)
-            .where(eq(clinicalRecords.id, existing.id));
-          return;
-        }
-        await tx.insert(clinicalRecords).values({ documentId, ...values });
+        await tx
+          .insert(clinicalRecords)
+          .values(values)
+          .onConflictDoUpdate({
+            target: clinicalRecords.documentId,
+            set: {
+              record: values.record,
+              findings: values.findings,
+              patientName: values.patientName,
+              admissionDate: values.admissionDate,
+              dischargeDate: values.dischargeDate,
+              extractionIncomplete: values.extractionIncomplete,
+              failedChunkCount: values.failedChunkCount,
+            },
+          });
       });
     },
     async getByDocument(
@@ -57,8 +70,10 @@ export function createClinicalRecordRepository(db: Database) {
         .limit(1);
       if (!row) return null;
       return {
-        record: row.record as ClinicalRecord,
-        findings: row.findings as Finding[],
+        record: row.record,
+        findings: row.findings,
+        extractionIncomplete: row.extractionIncomplete,
+        failedChunkCount: row.failedChunkCount,
       };
     },
   };

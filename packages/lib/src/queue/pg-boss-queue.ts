@@ -5,6 +5,13 @@ import {
   type ProcessDocumentJob,
 } from "./job-queue.ts";
 
+export class QueuePublishError extends Error {
+  constructor() {
+    super("Failed to publish the job to the queue");
+    this.name = "QueuePublishError";
+  }
+}
+
 export class PgBossQueue implements JobQueue {
   private readonly boss: PgBoss;
   private startPromise: Promise<void> | undefined;
@@ -32,7 +39,8 @@ export class PgBossQueue implements JobQueue {
   }
 
   async publish(job: ProcessDocumentJob): Promise<void> {
-    await this.boss.send(PROCESS_DOCUMENT_JOB, job);
+    const jobId = await this.boss.send(PROCESS_DOCUMENT_JOB, job);
+    if (jobId === null) throw new QueuePublishError();
   }
 
   async handle(

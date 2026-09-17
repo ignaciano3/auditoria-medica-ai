@@ -1,4 +1,10 @@
-import type { DocumentStatus, PageDocType, PageStatus } from "@audit/domain";
+import type {
+  ClinicalRecord,
+  DocumentStatus,
+  Finding,
+  PageDocType,
+  PageStatus,
+} from "@audit/domain";
 import {
   boolean,
   integer,
@@ -53,20 +59,30 @@ export const documentPages = pgTable(
   ],
 );
 
-export const clinicalRecords = pgTable("clinical_records", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  documentId: uuid("document_id")
-    .notNull()
-    .references(() => documents.id, { onDelete: "cascade" }),
-  record: jsonb("record").notNull(),
-  findings: jsonb("findings").notNull().default([]),
-  patientName: text("patient_name"),
-  admissionDate: text("admission_date"),
-  dischargeDate: text("discharge_date"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const clinicalRecords = pgTable(
+  "clinical_records",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    record: jsonb("record").$type<ClinicalRecord>().notNull(),
+    findings: jsonb("findings").$type<Finding[]>().notNull().default([]),
+    patientName: text("patient_name"),
+    admissionDate: text("admission_date"),
+    dischargeDate: text("discharge_date"),
+    extractionIncomplete: boolean("extraction_incomplete")
+      .notNull()
+      .default(false),
+    failedChunkCount: integer("failed_chunk_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("clinical_records_document_id_idx").on(table.documentId),
+  ],
+);
 
 export const findingsReview = pgTable("findings_review", {
   id: uuid("id").primaryKey().defaultRandom(),
