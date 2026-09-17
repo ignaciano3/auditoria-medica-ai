@@ -1,32 +1,18 @@
 import { errors } from "@audit/lib";
 import { NextResponse } from "next/server";
 import { getContainer } from "../../../lib/container.ts";
+import {
+  createUploadedDocument,
+  maxUploadBytes,
+  type UploadMeta,
+  validateUpload,
+} from "../../../lib/documents-service.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const maxUploadBytes = 50 * 1024 * 1024;
-
-export type UploadMeta = { name: string; type: string; size: number };
-
-export function validateUpload(
-  meta: UploadMeta,
-): { ok: true } | { ok: false; error: string } {
-  if (
-    meta.type !== "application/pdf" ||
-    !meta.name.toLowerCase().endsWith(".pdf")
-  ) {
-    return { ok: false, error: errors.notPdf };
-  }
-  if (meta.size > maxUploadBytes) {
-    return { ok: false, error: errors.tooLarge };
-  }
-  if (meta.size <= 0) {
-    return { ok: false, error: errors.invalidFile };
-  }
-  return { ok: true };
-}
+export { maxUploadBytes, type UploadMeta, validateUpload };
 
 export async function POST(request: Request): Promise<Response> {
   const form = await request.formData();
@@ -34,40 +20,15 @@ export async function POST(request: Request): Promise<Response> {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: errors.noFile }, { status: 400 });
   }
-  const validation = validateUpload({
-    name: file.name,
-    type: file.type,
-    size: file.size,
-  });
-  if (!validation.ok) {
-    return NextResponse.json({ error: validation.error }, { status: 400 });
+  const result = await createUploadedDocument(getContainer(), file);
+  if (!result.ok) {
+    const status = result.reason === "invalid" ? 400 : 500;
+    return NextResponse.json({ error: result.error }, { status });
   }
-
-  const container = getContainer();
-  const id = crypto.randomUUID();
-  const key = `documents/${id}/original.pdf`;
-  try {
-    await container.storage.put(
-      key,
-      new Uint8Array(await file.arrayBuffer()),
-      "application/pdf",
-    );
-    const document = await container.documents.create({
-      id,
-      originalFilename: file.name,
-      originalKey: key,
-    });
-    await container.queue.start();
-    await container.queue.publish({ documentId: document.id });
-    return NextResponse.json(
-      { id: document.id, status: document.status },
-      { status: 201 },
-    );
-  } catch {
-    await container.storage.delete(key).catch(() => undefined);
-    await container.documents.remove(id).catch(() => undefined);
-    return NextResponse.json({ error: errors.uploadFailed }, { status: 500 });
-  }
+  return NextResponse.json(
+    { id: result.id, status: result.status },
+    { status: 201 },
+  );
 }
 
 export async function GET(): Promise<Response> {

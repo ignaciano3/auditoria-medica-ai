@@ -1,6 +1,7 @@
 import { errors } from "@audit/lib";
 import { NextResponse } from "next/server";
 import { getContainer } from "../../../../lib/container.ts";
+import { deleteDocumentById } from "../../../../lib/documents-service.ts";
 import { serializeDocument } from "../../../../lib/serialize-document.ts";
 
 export const runtime = "nodejs";
@@ -38,12 +39,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await params;
-  const container = getContainer();
-  const row = await container.documents.getById(id);
-  if (!row) {
+  const removed = await deleteDocumentById(getContainer(), id);
+  if (!removed) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
-  await container.documents.remove(id);
-  await container.storage.delete(row.originalKey).catch(() => undefined);
   return new Response(null, { status: 204 });
 }
