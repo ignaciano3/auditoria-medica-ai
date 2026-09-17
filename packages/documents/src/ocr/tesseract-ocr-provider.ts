@@ -1,6 +1,7 @@
 import type {
   OCRProvider,
   PageClassification,
+  PageClassifier,
   PageImage,
 } from "./ocr-provider.ts";
 
@@ -10,12 +11,12 @@ export type TesseractRecognize = (
 ) => Promise<string>;
 
 export class TesseractOCRProvider implements OCRProvider {
-  private readonly classifier: OCRProvider;
+  private readonly classifier: PageClassifier;
   private readonly recognize: TesseractRecognize;
   private readonly lang: string;
 
   constructor(options: {
-    classifier: OCRProvider;
+    classifier: PageClassifier;
     recognize?: TesseractRecognize;
     lang?: string;
   }) {

@@ -1,7 +1,9 @@
 export { classifyPages } from "./classification/classify-pages.ts";
+export { LocalPageClassifier } from "./ocr/local-page-classifier.ts";
 export type {
   OCRProvider,
   PageClassification,
+  PageClassifier,
   PageImage,
 } from "./ocr/ocr-provider.ts";
 export {

@@ -69,6 +69,8 @@ export const clinicalRecord = {
 export const processing = {
   flowsheetSkipped: "Planilla manuscrita: no se extrae celda por celda.",
   notDataBearing: "Página sin datos clínicos: no se extrae.",
+  pending: "Página pendiente de procesamiento.",
+  failed: "No se pudo procesar esta página.",
 } as const;
 
 export const ui = {
@@ -82,6 +84,8 @@ export const ui = {
   loadError: "No se pudieron cargar los documentos.",
   documentLoadError: "No se pudo cargar el documento.",
   noPages: "El documento no tiene páginas.",
+  transcription: "Transcripción",
+  noTranscription: "La página no tiene texto transcrito.",
   previousPage: "Anterior",
   nextPage: "Siguiente",
   zoomIn: "Acercar",

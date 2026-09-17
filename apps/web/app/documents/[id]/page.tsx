@@ -12,7 +12,7 @@ export default function DocumentDetailPage({
   params,
 }: PageProps<"/documents/[id]">) {
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
+    <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-3 py-6 sm:px-4">
       <Suspense
         fallback={<output className="text-foreground/60">{ui.loading}</output>}
       >
@@ -63,7 +63,12 @@ async function DocumentContent({
         />
       ) : null}
       {pageCount !== null && pageCount > 0 ? (
-        <PdfViewer documentId={doc.id} pageCount={pageCount} initialPage={1} />
+        <PdfViewer
+          documentId={doc.id}
+          pageCount={pageCount}
+          initialPage={1}
+          pages={pages}
+        />
       ) : (
         <p className="text-foreground/60">
           {pageCount === null ? ui.loading : ui.noPages}

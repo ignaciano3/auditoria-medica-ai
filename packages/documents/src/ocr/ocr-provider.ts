@@ -8,7 +8,10 @@ export type PageClassification = {
   dataBearing: boolean;
 };
 
-export interface OCRProvider {
+export interface PageClassifier {
   classifyPage(input: PageImage): Promise<PageClassification>;
+}
+
+export interface OCRProvider extends PageClassifier {
   transcribePage(input: PageImage): Promise<string>;
 }
