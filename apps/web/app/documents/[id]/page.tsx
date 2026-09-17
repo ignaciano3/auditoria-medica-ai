@@ -44,7 +44,7 @@ async function DocumentContent({
   return (
     <>
       <header className="flex items-center gap-3">
-        <h1 className="flex-1 [overflow-wrap:anywhere]">
+        <h1 className="flex-1 text-2xl font-semibold [overflow-wrap:anywhere]">
           {doc.originalFilename}
         </h1>
         <DocumentStatusBadge status={doc.status} />
