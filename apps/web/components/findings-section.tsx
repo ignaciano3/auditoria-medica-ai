@@ -36,7 +36,7 @@ export function FindingsSection({
 }) {
   const [reviewMap, setReviewMap] = useState(() => toMap(reviews));
   const [filter, setFilter] = useState<FindingFilter>("all");
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
     setReviewMap(toMap(reviews));
@@ -57,7 +57,7 @@ export function FindingsSection({
     const next = new Map(previous);
     next.set(findingId, { findingId, status, note });
     setReviewMap(next);
-    setFailed(false);
+    setFailed(null);
     try {
       const result = await setFindingReview({
         documentId,
@@ -67,11 +67,11 @@ export function FindingsSection({
       });
       if (!result.ok) {
         setReviewMap(previous);
-        setFailed(true);
+        setFailed(result.error);
       }
     } catch {
       setReviewMap(previous);
-      setFailed(true);
+      setFailed(copy.reviewFailed);
     }
   }
 
@@ -111,9 +111,9 @@ export function FindingsSection({
         ))}
       </div>
 
-      {failed ? (
+      {failed !== null ? (
         <p className="text-[#d1242f]" role="alert">
-          {copy.reviewFailed}
+          {failed}
         </p>
       ) : null}
 

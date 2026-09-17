@@ -36,6 +36,7 @@ export function FindingCard({
 }) {
   const [draftNote, setDraftNote] = useState(note ?? "");
   const documentHref = `/documents/${documentId}` as Route;
+  const statusNote = draftNote.trim() !== "" ? draftNote : note;
 
   return (
     <li
@@ -67,23 +68,26 @@ export function FindingCard({
           {copy.evidence}
         </h4>
         <ul className="flex list-none flex-col gap-1">
-          {finding.evidence.map((item) => (
-            <li key={`${item.source.pageNumber}-${item.source.text}`}>
-              <Link
-                className="text-sm underline"
-                href={{
-                  pathname: documentHref,
-                  query: { page: item.source.pageNumber },
-                  hash: `finding-${finding.id}`,
-                }}
-              >
-                {copy.viewPage(item.source.pageNumber)}
-              </Link>
-              <span className="ml-2 text-sm text-foreground/60">
-                {item.relevance}
-              </span>
-            </li>
-          ))}
+          {finding.evidence.map((item, index) => {
+            const evidenceKey = `${item.source.pageNumber}-${index}-${item.source.text}`;
+            return (
+              <li key={evidenceKey}>
+                <Link
+                  className="text-sm underline"
+                  href={{
+                    pathname: documentHref,
+                    query: { page: item.source.pageNumber },
+                    hash: `finding-${finding.id}`,
+                  }}
+                >
+                  {copy.viewPage(item.source.pageNumber)}
+                </Link>
+                <span className="ml-2 text-sm text-foreground/60">
+                  {item.relevance}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
@@ -91,14 +95,14 @@ export function FindingCard({
         <button
           type="button"
           className="cursor-pointer rounded-md border border-foreground/20 px-3 py-1.5 text-sm"
-          onClick={() => onReview(finding.id, "reviewed", note)}
+          onClick={() => onReview(finding.id, "reviewed", statusNote)}
         >
           {ui.reviewed}
         </button>
         <button
           type="button"
           className="cursor-pointer rounded-md border border-foreground/20 px-3 py-1.5 text-sm"
-          onClick={() => onReview(finding.id, "dismissed", note)}
+          onClick={() => onReview(finding.id, "dismissed", statusNote)}
         >
           {ui.dismissFinding}
         </button>
@@ -106,7 +110,7 @@ export function FindingCard({
           <button
             type="button"
             className="cursor-pointer rounded-md border border-foreground/20 px-3 py-1.5 text-sm"
-            onClick={() => onReview(finding.id, "pending", note)}
+            onClick={() => onReview(finding.id, "pending", statusNote)}
           >
             {copy.markPending}
           </button>
