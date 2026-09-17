@@ -14,7 +14,9 @@ describe("clinicalRecordSchema", () => {
       microbiology: [],
       clinicalEvents: [],
     };
-    expect(() => clinicalRecordSchema.parse(record)).not.toThrow();
+    const parsed = clinicalRecordSchema.parse(record);
+    expect(parsed.hospitalization.admissionDateConflicts).toEqual([]);
+    expect(parsed.hospitalization.dischargeDateConflicts).toEqual([]);
   });
 
   test("rejects a value without sources", () => {
@@ -56,6 +58,14 @@ describe("clinicalRecordSchema", () => {
             ],
           },
         ],
+        dischargeDateConflicts: [
+          {
+            value: "20/02/2026",
+            sources: [
+              { documentId: "d1", pageNumber: 9, text: "alta 20/02/2026" },
+            ],
+          },
+        ],
       },
       history: { pathological: [], allergies: [], usualMedications: [] },
       medications: [],
@@ -70,6 +80,10 @@ describe("clinicalRecordSchema", () => {
       parsed.hospitalization.admissionDateConflicts?.[0]?.sources[0]
         ?.pageNumber,
     ).toBe(1);
+    expect(parsed.hospitalization.dischargeDateConflicts).toHaveLength(1);
+    expect(
+      parsed.hospitalization.dischargeDateConflicts?.[0]?.sources[0]?.text,
+    ).toBe("alta 20/02/2026");
   });
 });
 
@@ -114,6 +128,30 @@ describe("findingSchema", () => {
       explanation: "La medicación parece comenzar antes del ingreso.",
       evidence: [evidence],
       requiresHumanReview: false,
+    };
+    expect(() => findingSchema.parse(finding)).toThrow();
+  });
+
+  test("rejects a finding without the requiresHumanReview key", () => {
+    const finding = {
+      id: "f1",
+      severity: "medium",
+      category: "temporal",
+      title: "Posible inconsistencia temporal",
+      explanation: "La medicación parece comenzar antes del ingreso.",
+      evidence: [evidence],
+    };
+    expect(() => findingSchema.parse(finding)).toThrow();
+  });
+
+  test("rejects a finding without the evidence key", () => {
+    const finding = {
+      id: "f1",
+      severity: "medium",
+      category: "temporal",
+      title: "Posible inconsistencia temporal",
+      explanation: "La medicación parece comenzar antes del ingreso.",
+      requiresHumanReview: true,
     };
     expect(() => findingSchema.parse(finding)).toThrow();
   });

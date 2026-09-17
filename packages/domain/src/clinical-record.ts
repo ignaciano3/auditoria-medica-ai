@@ -136,7 +136,6 @@ export type ClinicalRecord = {
   microbiology: MicrobiologyResult[];
   clinicalEvents: ClinicalEvent[];
   discharge?: DischargeInformation;
-  dischargeInformation?: DischargeInformation;
 };
 
 export const patientSchema = z.object({
@@ -190,7 +189,7 @@ export const clinicalEventSchema = z.object({
   sources: z.array(sourceSchema).min(1),
 });
 
-export const dischargeInformationSchema = z.object({
+export const dischargeSchema = z.object({
   date: extractedValueSchema(z.string()).optional(),
   conditionAtDischarge: extractedValueSchema(z.string()).optional(),
   diagnosis: extractedValueSchema(z.string()).optional(),
@@ -233,6 +232,5 @@ export const clinicalRecordSchema = z.object({
   studies: z.array(studySchema).default([]),
   microbiology: z.array(microbiologyResultSchema).default([]),
   clinicalEvents: z.array(clinicalEventSchema).default([]),
-  discharge: dischargeInformationSchema.optional(),
-  dischargeInformation: dischargeInformationSchema.optional(),
+  discharge: dischargeSchema.optional(),
 });

@@ -16,7 +16,7 @@ export {
   boundingBoxSchema,
   clinicalEventSchema,
   clinicalRecordSchema,
-  dischargeInformationSchema,
+  dischargeSchema,
   evidenceSchema,
   extractedValueSchema,
   historySchema,
