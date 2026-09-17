@@ -8,10 +8,10 @@ import { serializeDocument } from "../lib/serialize-document.ts";
 
 export default function Home() {
   return (
-    <main className="page">
-      <h1>{ui.appTitle}</h1>
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
+      <h1 className="text-2xl font-semibold">{ui.appTitle}</h1>
       <DocumentUploader />
-      <Suspense fallback={<p className="muted">{ui.loading}</p>}>
+      <Suspense fallback={<p className="text-foreground/60">{ui.loading}</p>}>
         <DocumentListSection />
       </Suspense>
     </main>

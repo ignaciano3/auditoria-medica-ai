@@ -35,13 +35,13 @@ export function DocumentUploader() {
   }
 
   return (
-    <section className="card">
-      <h2 className="card-title">{ui.newDocument}</h2>
-      <label className="upload-button">
+    <section className="flex flex-col gap-2 rounded-lg border border-foreground/20 p-4">
+      <h2 className="text-base font-semibold">{ui.newDocument}</h2>
+      <label className="inline-block w-fit cursor-pointer rounded-md bg-foreground px-4 py-2 text-background focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-foreground">
         {ui.upload}
         <input
           ref={inputRef}
-          className="upload-input"
+          className="sr-only"
           type="file"
           accept="application/pdf"
           disabled={state.kind === "uploading"}
@@ -49,13 +49,13 @@ export function DocumentUploader() {
         />
       </label>
       {state.kind === "uploading" ? (
-        <p className="muted">{ui.uploading}</p>
+        <p className="text-foreground/60">{ui.uploading}</p>
       ) : null}
       {state.kind === "success" ? (
-        <output className="success">{ui.uploadSuccess}</output>
+        <output className="text-[#1a7f37]">{ui.uploadSuccess}</output>
       ) : null}
       {state.kind === "error" ? (
-        <p className="error" role="alert">
+        <p className="text-[#d1242f]" role="alert">
           {state.message}
         </p>
       ) : null}

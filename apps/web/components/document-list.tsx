@@ -68,24 +68,30 @@ export function DocumentList({
 
   if (state.kind === "error") {
     return (
-      <p className="error" role="alert">
+      <p className="text-[#d1242f]" role="alert">
         {ui.loadError}
       </p>
     );
   }
   if (documents.length === 0) {
-    return <p className="muted">{ui.noDocuments}</p>;
+    return <p className="text-foreground/60">{ui.noDocuments}</p>;
   }
   return (
-    <ul className="document-list">
+    <ul className="flex list-none flex-col gap-2">
       {documents.map((doc) => (
-        <li key={doc.id} className="document-item">
-          <Link className="document-name" href={`/documents/${doc.id}`}>
+        <li
+          key={doc.id}
+          className="flex items-center gap-3 rounded-lg border border-foreground/15 px-4 py-3"
+        >
+          <Link
+            className="flex-1 [overflow-wrap:anywhere]"
+            href={`/documents/${doc.id}`}
+          >
             {doc.originalFilename}
           </Link>
           <DocumentStatusBadge status={doc.status} />
           {doc.status === "ready" && doc.pageCount !== null ? (
-            <span className="muted">
+            <span className="text-foreground/60">
               {doc.pageCount} {ui.pages}
             </span>
           ) : null}
