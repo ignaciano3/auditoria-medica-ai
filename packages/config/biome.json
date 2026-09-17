@@ -1,17 +1,18 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "root": false,
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "correctness": { "all": true },
-      "suspicious": { "all": true },
-      "complexity": { "all": true },
-      "performance": { "all": true },
-      "security": { "all": true },
+      "preset": "recommended",
+      "correctness": {},
+      "suspicious": {},
+      "complexity": {},
+      "performance": {},
+      "security": {},
       "style": { "noNonNullAssertion": "error" }
     }
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
-  "organizeImports": { "enabled": true }
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
 }

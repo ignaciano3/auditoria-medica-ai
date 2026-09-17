@@ -1,6 +1,6 @@
 {
   "extends": ["./packages/config/biome.json"],
   "files": {
-    "ignore": ["**/.next/**", "**/dist/**", "**/coverage/**"]
+    "includes": ["**", "!**/.next", "!**/dist", "!**/coverage"]
   }
 }
