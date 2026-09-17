@@ -8,7 +8,7 @@ const schema = z.object({
   S3_SECRET_KEY: z.string().min(1),
   LLM_PROVIDER: z.enum(["openai"]).default("openai"),
   LLM_MODEL: z.string().min(1),
-  OCR_PROVIDER: z.enum(["openai"]).default("openai"),
+  OCR_PROVIDER: z.enum(["openai", "tesseract"]).default("openai"),
   OCR_MODEL: z.string().min(1),
   OPENAI_API_KEY: z.string().min(1),
   DOCUMENT_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
