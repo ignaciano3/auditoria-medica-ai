@@ -52,6 +52,38 @@ describe("parseEnv", () => {
     expect(result.OCR_PROVIDER).toBe("tesseract");
   });
 
+  test("accepts fully local providers without an OpenAI key", () => {
+    const result = parseEnv({
+      DATABASE_URL: "postgres://u:p@localhost:5432/db",
+      S3_ENDPOINT: "http://localhost:9000",
+      S3_BUCKET: "documents",
+      S3_ACCESS_KEY: "minio",
+      S3_SECRET_KEY: "minio123",
+      LLM_PROVIDER: "heuristic",
+      LLM_MODEL: "gpt-4.1",
+      OCR_PROVIDER: "local",
+      OCR_MODEL: "gpt-4.1",
+    });
+    expect(result.OCR_PROVIDER).toBe("local");
+    expect(result.OPENAI_API_KEY).toBe("");
+  });
+
+  test("rejects an OpenAI provider without an OpenAI key", () => {
+    expect(() =>
+      parseEnv({
+        DATABASE_URL: "postgres://u:p@localhost:5432/db",
+        S3_ENDPOINT: "http://localhost:9000",
+        S3_BUCKET: "documents",
+        S3_ACCESS_KEY: "minio",
+        S3_SECRET_KEY: "minio123",
+        LLM_PROVIDER: "openai",
+        LLM_MODEL: "gpt-4.1",
+        OCR_PROVIDER: "local",
+        OCR_MODEL: "gpt-4.1",
+      }),
+    ).toThrow();
+  });
+
   test("rejects a missing required value", () => {
     expect(() => parseEnv({})).toThrow();
   });

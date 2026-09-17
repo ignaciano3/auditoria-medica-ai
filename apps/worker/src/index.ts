@@ -6,6 +6,7 @@ import {
   getDb,
 } from "@audit/db";
 import {
+  LocalPageClassifier,
   OpenAIVisionOCRProvider,
   renderPdfPages,
   TesseractOCRProvider,
@@ -15,6 +16,27 @@ import {
   createProcessDocument,
   type ProcessingLogger,
 } from "./pipeline/process-document.ts";
+
+function createOcrProvider(env: ReturnType<typeof getEnv>) {
+  switch (env.OCR_PROVIDER) {
+    case "local":
+      return new TesseractOCRProvider({
+        classifier: new LocalPageClassifier(),
+      });
+    case "tesseract":
+      return new TesseractOCRProvider({
+        classifier: new OpenAIVisionOCRProvider({
+          apiKey: env.OPENAI_API_KEY,
+          model: env.OCR_MODEL,
+        }),
+      });
+    default:
+      return new OpenAIVisionOCRProvider({
+        apiKey: env.OPENAI_API_KEY,
+        model: env.OCR_MODEL,
+      });
+  }
+}
 
 const logger: ProcessingLogger = {
   info: (event) => {
@@ -38,18 +60,7 @@ async function main(): Promise<void> {
       secretKey: env.S3_SECRET_KEY,
     }),
     render: renderPdfPages,
-    ocr:
-      env.OCR_PROVIDER === "tesseract"
-        ? new TesseractOCRProvider({
-            classifier: new OpenAIVisionOCRProvider({
-              apiKey: env.OPENAI_API_KEY,
-              model: env.OCR_MODEL,
-            }),
-          })
-        : new OpenAIVisionOCRProvider({
-            apiKey: env.OPENAI_API_KEY,
-            model: env.OCR_MODEL,
-          }),
+    ocr: createOcrProvider(env),
     provider:
       env.LLM_PROVIDER === "heuristic"
         ? new HeuristicLLMProvider()

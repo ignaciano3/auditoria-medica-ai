@@ -17,7 +17,7 @@ Auto-alojado: todo corre en tu máquina vía Docker Compose, salvo las llamadas 
 - Ubuntu/Linux con Docker y Docker Compose.
 - Tu usuario con acceso al socket de Docker: `sudo usermod -aG docker $USER` (y volver a iniciar sesión).
 - [Bun](https://bun.sh) 1.3.14 y Node 24+.
-- Una `OPENAI_API_KEY` válida (las llamadas salen del host hacia OpenAI).
+- Una `OPENAI_API_KEY` válida (las llamadas salen del host hacia OpenAI). Opcional: no hace falta en **modo local**.
 - Opcional: [Tailscale](https://tailscale.com) para acceder desde otra máquina.
 
 ## Puesta en marcha
@@ -50,6 +50,19 @@ Verificación rápida:
 ```bash
 curl -s localhost:3000/api/health   # {"status":"ok"}
 ```
+
+### Modo local (sin OpenAI)
+
+Para correr todo sin clave ni llamadas a OpenAI, usá el proveedor heurístico y el OCR local (tesseract con clasificador local):
+
+```bash
+# .env
+LLM_PROVIDER=heuristic
+OCR_PROVIDER=local
+OPENAI_API_KEY=      # vacío: no se usa
+```
+
+`OPENAI_API_KEY` solo es obligatoria cuando `LLM_PROVIDER` u `OCR_PROVIDER` es `openai`. El worker dentro de Compose ya incluye `tesseract-ocr` + `tesseract-ocr-spa`; el clasificador local marca todas las páginas como portadoras de datos, así que las planillas manuscritas se transcriben en vez de omitirse.
 
 El bucket de MinIO (`documents`) y las tablas se crean solos con los servicios `minio-init` y `migrate` de Compose. Para correr las migraciones a mano:
 
@@ -91,9 +104,9 @@ Referencia en `.env.example`:
 | `S3_ENDPOINT` | Endpoint de MinIO/S3 |
 | `S3_BUCKET` | Bucket de documentos (`documents`) |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Credenciales S3/MinIO |
-| `LLM_PROVIDER` / `LLM_MODEL` | Proveedor y modelo para extracción |
-| `OCR_PROVIDER` / `OCR_MODEL` | Proveedor y modelo para OCR |
-| `OPENAI_API_KEY` | Clave de OpenAI (obligatoria para procesar) |
+| `LLM_PROVIDER` / `LLM_MODEL` | Proveedor y modelo para extracción (`openai` \| `heuristic`) |
+| `OCR_PROVIDER` / `OCR_MODEL` | Proveedor y modelo para OCR (`openai` \| `tesseract` \| `local`) |
+| `OPENAI_API_KEY` | Clave de OpenAI (obligatoria solo si algún proveedor es `openai`) |
 | `DOCUMENT_RETENTION_DAYS` | Retención de documentos |
 
 Notas:
