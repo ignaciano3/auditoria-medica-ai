@@ -78,6 +78,7 @@ async function DocumentContent({
       ) : null}
       {clinical !== null ? (
         <ClinicalRecordView
+          documentId={doc.id}
           record={clinical.record}
           incomplete={clinical.extractionIncomplete || failedPages.length > 0}
           failedPages={failedPages}
