@@ -1,0 +1,19 @@
+{
+  "root": false,
+  "extends": ["../../packages/config/biome.json"],
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["**", "!**/.next", "!**/dist"]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "domains": {
+      "next": "recommended",
+      "react": "recommended"
+    }
+  }
+}
