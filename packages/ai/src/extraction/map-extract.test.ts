@@ -85,7 +85,9 @@ describe("mapExtract", () => {
     expect(records[2]?.patient.name?.value).toBe("c");
     expect(errors).toHaveLength(1);
     expect(errors[0]?.index).toBe(1);
-    expect((errors[0]?.error as Error).message).toBe("chunk 1 failed");
+    expect((errors[0]?.error as Error | undefined)?.message).toBe(
+      "chunk 1 failed",
+    );
   });
 
   test("does not report errors when every chunk succeeds", async () => {
