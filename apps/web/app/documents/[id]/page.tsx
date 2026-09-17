@@ -1,5 +1,6 @@
 import { ui } from "@audit/lib/i18n";
 import { io } from "next/cache";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
@@ -43,6 +44,12 @@ async function DocumentContent({
 
   return (
     <>
+      <Link
+        className="text-sm text-foreground/60 hover:text-foreground"
+        href="/"
+      >
+        {ui.backToHome}
+      </Link>
       <header className="flex items-center gap-3">
         <h1 className="flex-1 text-2xl font-semibold [overflow-wrap:anywhere]">
           {doc.originalFilename}

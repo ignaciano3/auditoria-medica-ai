@@ -94,18 +94,20 @@ export function PdfViewer({
             style={{ width: `${zoom * 100}%` }}
           />
         </div>
-        <aside className="flex flex-col gap-2 overflow-auto rounded-lg border border-foreground/15 bg-foreground/5 p-4 lg:max-h-[80vh]">
-          <h2 className="text-sm font-semibold text-foreground/70">
-            {ui.transcription}
-          </h2>
-          {transcript.kind === "text" ? (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
-              {transcript.text}
-            </p>
-          ) : (
-            <p className="text-sm text-foreground/60">{transcript.message}</p>
-          )}
-        </aside>
+        <div className="relative">
+          <aside className="flex flex-col gap-2 overflow-auto rounded-lg border border-foreground/15 bg-foreground/5 p-4 lg:absolute lg:inset-0">
+            <h2 className="text-sm font-semibold text-foreground/70">
+              {ui.transcription}
+            </h2>
+            {transcript.kind === "text" ? (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
+                {transcript.text}
+              </p>
+            ) : (
+              <p className="text-sm text-foreground/60">{transcript.message}</p>
+            )}
+          </aside>
+        </div>
       </div>
     </section>
   );

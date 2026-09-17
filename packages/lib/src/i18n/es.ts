@@ -75,6 +75,7 @@ export const processing = {
 
 export const ui = {
   appTitle: "Historias clínicas",
+  backToHome: "← Historias clínicas",
   newDocument: "Nueva historia",
   upload: "Subir",
   uploading: "Subiendo…",
