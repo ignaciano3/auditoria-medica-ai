@@ -1,8 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import type { ClinicalRecord, Source } from "@audit/domain";
+import type {
+  ClinicalRecord,
+  LabResult,
+  Medication,
+  Source,
+} from "@audit/domain";
 import {
   countsBySection,
   displayValue,
+  labResultItemKey,
+  medicationItemKey,
   mergeSourcePages,
   sourcePages,
 } from "./clinical-record-view.ts";
@@ -43,6 +50,29 @@ describe("displayValue", () => {
 
   test("stringifies numbers", () => {
     expect(displayValue(45)).toBe("45");
+  });
+});
+
+describe("list item keys", () => {
+  test("disambiguates medications that share a name", () => {
+    const medication = (): Medication => ({
+      name: { value: "RESULTADO", sources: [source(1)] },
+      sources: [source(1)],
+    });
+    expect(medicationItemKey(medication(), 0)).not.toBe(
+      medicationItemKey(medication(), 1),
+    );
+  });
+
+  test("disambiguates lab results that share a name and value", () => {
+    const result = (): LabResult => ({
+      name: { value: "SODIO", sources: [source(1)] },
+      value: { value: "134,0", sources: [source(1)] },
+      sources: [source(1)],
+    });
+    expect(labResultItemKey(result(), 0)).not.toBe(
+      labResultItemKey(result(), 1),
+    );
   });
 });
 

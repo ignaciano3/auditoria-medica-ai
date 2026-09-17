@@ -1,4 +1,9 @@
-import type { ClinicalRecord, Source } from "@audit/domain";
+import type {
+  ClinicalRecord,
+  LabResult,
+  Medication,
+  Source,
+} from "@audit/domain";
 
 export function displayValue(
   value: string | number | undefined,
@@ -6,6 +11,17 @@ export function displayValue(
   if (value === undefined) return undefined;
   const text = String(value).trim();
   return text === "" ? undefined : text;
+}
+
+export function medicationItemKey(
+  medication: Medication,
+  index: number,
+): string {
+  return `${displayValue(medication.name.value) ?? "medication"}-${index}`;
+}
+
+export function labResultItemKey(result: LabResult, index: number): string {
+  return `${displayValue(result.name.value) ?? "lab"}-${displayValue(result.value.value) ?? ""}-${index}`;
 }
 
 export function sourcePages(sources: Source[]): number[] {

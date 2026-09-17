@@ -12,6 +12,8 @@ import type {
 import { clinicalRecord, medicationStatusLabels } from "@audit/lib/i18n";
 import {
   displayValue,
+  labResultItemKey,
+  medicationItemKey,
   mergeSourcePages,
   sourcePages,
 } from "../lib/clinical-record-view.ts";
@@ -308,9 +310,9 @@ export function HistorySection({
                 {clinicalRecord.usualMedications}
               </h3>
               <ul className="flex list-none flex-col gap-2">
-                {history.usualMedications.map((medication) => (
+                {history.usualMedications.map((medication, index) => (
                   <MedicationItem
-                    key={medication.name.value}
+                    key={medicationItemKey(medication, index)}
                     documentId={documentId}
                     medication={medication}
                   />
@@ -342,9 +344,9 @@ export function MedicationsSection({
         <RecordEmpty />
       ) : (
         <ul className="flex list-none flex-col gap-2">
-          {medications.map((medication) => (
+          {medications.map((medication, index) => (
             <MedicationItem
-              key={medication.name.value}
+              key={medicationItemKey(medication, index)}
               documentId={documentId}
               medication={medication}
             />
@@ -382,9 +384,9 @@ export function LaboratorySection({
         <RecordEmpty />
       ) : (
         <ul className="flex list-none flex-col gap-2">
-          {laboratory.map((result) => (
+          {laboratory.map((result, index) => (
             <RecordItem
-              key={`${result.name.value}-${result.value.value}`}
+              key={labResultItemKey(result, index)}
               documentId={documentId}
               title={displayValue(result.name.value)}
               fields={[
