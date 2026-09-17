@@ -6,6 +6,7 @@ import {
   errors,
   failedChunksIndicator,
   failedPagesIndicator,
+  medicationStatusLabels,
 } from "./es.ts";
 
 describe("documentStatusLabels", () => {
@@ -56,5 +57,42 @@ describe("clinicalRecord labels", () => {
     expect(deleteConfirm("historia.pdf")).toBe(
       '¿Eliminar "historia.pdf"? Esta acción no se puede deshacer.',
     );
+  });
+});
+
+describe("clinicalRecord full-view labels", () => {
+  test("labels birth date and history in Spanish", () => {
+    expect(clinicalRecord.birthDate).toBe("Fecha de nacimiento");
+    expect(clinicalRecord.pathological).toBe("Antecedentes patológicos");
+    expect(clinicalRecord.allergies).toBe("Alergias");
+  });
+
+  test("labels discharge and item fields in Spanish", () => {
+    expect(clinicalRecord.discharge).toBe("Alta");
+    expect(clinicalRecord.conditionAtDischarge).toBe("Condición al alta");
+    expect(clinicalRecord.referenceRange).toBe("Valor de referencia");
+    expect(clinicalRecord.sensitivity).toBe("Sensibilidad");
+  });
+
+  test("labels date conflicts and the cautious note", () => {
+    expect(clinicalRecord.admissionDateConflicts).toBe(
+      "Fechas de ingreso contradictorias",
+    );
+    expect(clinicalRecord.dischargeDateConflicts).toBe(
+      "Fechas de alta contradictorias",
+    );
+    expect(clinicalRecord.dateConflictNote).toContain(
+      "Revisar la documentación original",
+    );
+  });
+});
+
+describe("medicationStatusLabels", () => {
+  test("maps every medication status to Spanish", () => {
+    expect(medicationStatusLabels).toEqual({
+      active: "Activa",
+      stopped: "Suspendida",
+      unknown: "Desconocida",
+    });
   });
 });

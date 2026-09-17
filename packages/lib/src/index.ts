@@ -7,6 +7,7 @@ export {
   failedChunksIndicator,
   failedPagesIndicator,
   findings,
+  medicationStatusLabels,
   pageDocTypeLabels,
   pageImageAlt,
   pageIndicator,

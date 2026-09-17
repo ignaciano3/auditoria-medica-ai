@@ -1,4 +1,8 @@
-import type { DocumentStatus, PageDocType } from "@audit/domain";
+import type {
+  DocumentStatus,
+  MedicationStatus,
+  PageDocType,
+} from "@audit/domain";
 
 export const documentStatusLabels: Record<DocumentStatus, string> = {
   uploaded: "Subido",
@@ -60,17 +64,51 @@ export function failedChunksIndicator(failedChunks: number): string {
 
 export const clinicalRecord = {
   patient: "Paciente",
+  name: "Nombre",
   age: "Edad",
   sex: "Sexo",
+  birthDate: "Fecha de nacimiento",
   hospitalization: "Internación",
   admissionDate: "Fecha de ingreso",
   dischargeDate: "Fecha de alta",
   reason: "Motivo de ingreso",
   diagnoses: "Diagnósticos",
+  dischargeDiagnosis: "Diagnóstico de alta",
+  admissionDateConflicts: "Fechas de ingreso contradictorias",
+  dischargeDateConflicts: "Fechas de alta contradictorias",
+  dateConflictNote:
+    "La documentación registra más de una fecha. Revisar la documentación original.",
+  history: "Antecedentes",
+  pathological: "Antecedentes patológicos",
+  allergies: "Alergias",
+  usualMedications: "Medicación habitual",
   medications: "Medicaciones",
   laboratory: "Laboratorio",
   studies: "Estudios",
   microbiology: "Microbiología",
+  discharge: "Alta",
+  conditionAtDischarge: "Condición al alta",
+  treatment: "Tratamiento",
+  instructions: "Indicaciones",
+  warningSigns: "Signos de alarma",
+  followUp: "Seguimiento",
+  dose: "Dosis",
+  route: "Vía",
+  frequency: "Frecuencia",
+  startDate: "Inicio",
+  endDate: "Fin",
+  status: "Estado",
+  date: "Fecha",
+  value: "Valor",
+  unit: "Unidad",
+  referenceRange: "Valor de referencia",
+  type: "Tipo",
+  indication: "Indicación",
+  result: "Resultado",
+  sample: "Muestra",
+  organism: "Microorganismo",
+  sensitivity: "Sensibilidad",
+  evidence: "Evidencia",
   noInfo: "No se encontró información suficiente",
 } as const;
 
@@ -152,3 +190,9 @@ export const ui = {
   deleteDocument: "Eliminar",
   deleting: "Eliminando…",
 } as const;
+
+export const medicationStatusLabels: Record<MedicationStatus, string> = {
+  active: "Activa",
+  stopped: "Suspendida",
+  unknown: "Desconocida",
+};
