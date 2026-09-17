@@ -18,6 +18,83 @@ function normalize(value: unknown): string {
   return String(value).trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function foldForMatch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isBlankHistoryValue(value: string): boolean {
+  const text = value.trim();
+  if (text === "") return true;
+  return !/[\p{L}\p{N}]/u.test(text);
+}
+
+function withinEditDistance(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) return false;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i++) {
+    const current: number[] = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const distance = Math.min(
+        (previous[j - 1] ?? 0) + cost,
+        (previous[j] ?? 0) + 1,
+        (current[j - 1] ?? 0) + 1,
+      );
+      current[j] = distance;
+      if (distance < rowMin) rowMin = distance;
+    }
+    if (rowMin > max) return false;
+    previous = current;
+  }
+  return (previous[b.length] ?? Number.POSITIVE_INFINITY) <= max;
+}
+
+type HistoryGroup = {
+  item: ExtractedValue<string>;
+  sourceLists: Source[][];
+  variants: string[];
+};
+
+function mergeHistoryValues(
+  records: readonly ClinicalRecord[],
+  select: (record: ClinicalRecord) => readonly ExtractedValue<string>[],
+): ExtractedValue<string>[] {
+  const groups: HistoryGroup[] = [];
+  for (const record of records) {
+    for (const item of select(record)) {
+      if (isBlankHistoryValue(item.value)) continue;
+      const canonical = foldForMatch(item.value);
+      if (canonical === "") continue;
+      const group = groups.find((candidate) =>
+        candidate.variants.some((variant) =>
+          withinEditDistance(variant, canonical, 1),
+        ),
+      );
+      if (group !== undefined) {
+        group.sourceLists.push(item.sources);
+        if (!group.variants.includes(canonical)) group.variants.push(canonical);
+      } else {
+        groups.push({
+          item,
+          sourceLists: [item.sources],
+          variants: [canonical],
+        });
+      }
+    }
+  }
+  return groups.map((group) => ({
+    ...group.item,
+    sources: unionSources(group.sourceLists),
+  }));
+}
+
 function sourceKey(source: Source): string {
   return `${source.documentId}#${source.pageNumber}`;
 }
@@ -290,15 +367,13 @@ export function reduceRecords(
     patient: mergePatient(records),
     hospitalization: mergeHospitalization(records),
     history: {
-      pathological: mergeArrays(
+      pathological: mergeHistoryValues(
         records,
         (source) => source.history.pathological,
-        extractedKey,
       ),
-      allergies: mergeArrays(
+      allergies: mergeHistoryValues(
         records,
         (source) => source.history.allergies,
-        extractedKey,
       ),
       usualMedications: mergeArrays(
         records,

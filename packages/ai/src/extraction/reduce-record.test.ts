@@ -387,4 +387,78 @@ describe("reduceRecords", () => {
       expect(mergedPaths.has(path)).toBe(true);
     }
   });
+
+  test("drops blank and placeholder history entries", () => {
+    const a = emptyClinicalRecord();
+    a.history.allergies = [
+      { value: "", sources: [source(1, "sin alergias")] },
+      { value: "   ", sources: [source(2, "sin alergias")] },
+      { value: "-", sources: [source(3, "sin alergias")] },
+    ];
+
+    const b = emptyClinicalRecord();
+    b.history.allergies = [
+      { value: "Penicilina", sources: [source(4, "alergia")] },
+    ];
+
+    const merged = reduceRecords([a, b]);
+
+    expect(merged.history.allergies).toHaveLength(1);
+    expect(merged.history.allergies[0]?.value).toBe("Penicilina");
+    expect(merged.history.allergies[0]?.sources).toEqual([
+      source(4, "alergia"),
+    ]);
+  });
+
+  test("groups near-identical history values and unions their sources", () => {
+    const records = ["Peniclina", "Penicina", "PENICILINA"].map(
+      (value, index) => {
+        const record = emptyClinicalRecord();
+        record.history.allergies = [extracted(value, index + 1)];
+        return record;
+      },
+    );
+
+    const merged = reduceRecords(records);
+
+    expect(merged.history.allergies).toHaveLength(1);
+    expect(merged.history.allergies[0]?.value).toBe("Peniclina");
+    expect(
+      merged.history.allergies[0]?.sources.map((s) => s.pageNumber),
+    ).toEqual([1, 2, 3]);
+  });
+
+  test("keeps distinct history values that are not near-identical", () => {
+    const records = ["Penicilina", "Sulfamidas"].map((value, index) => {
+      const record = emptyClinicalRecord();
+      record.history.pathological = [extracted(value, index + 1)];
+      return record;
+    });
+
+    const merged = reduceRecords(records);
+
+    expect(merged.history.pathological).toHaveLength(2);
+  });
+
+  test("does not fuzzy-merge distinct medication names", () => {
+    const a = emptyClinicalRecord();
+    a.medications = [
+      {
+        name: { value: "Metformina", sources: [source(1, "metformina")] },
+        sources: [source(1, "metformina")],
+      },
+    ];
+
+    const b = emptyClinicalRecord();
+    b.medications = [
+      {
+        name: { value: "Metformine", sources: [source(2, "metformine")] },
+        sources: [source(2, "metformine")],
+      },
+    ];
+
+    const merged = reduceRecords([a, b]);
+
+    expect(merged.medications).toHaveLength(2);
+  });
 });
