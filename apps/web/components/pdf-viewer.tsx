@@ -96,6 +96,7 @@ export function PdfViewer({
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="overflow-auto rounded-lg border border-foreground/15 bg-foreground/5">
+          {/* biome-ignore lint/performance/noImgElement: PDF page render with dynamic zoom/scroll */}
           <img
             className="mx-auto block h-auto max-w-none"
             src={`/api/documents/${documentId}/pages/${currentPage}`}
