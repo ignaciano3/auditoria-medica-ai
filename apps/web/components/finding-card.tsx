@@ -6,9 +6,8 @@ import type {
   FindingSeverity,
 } from "@audit/domain";
 import { findings as copy, ui } from "@audit/lib/i18n";
-import type { Route } from "next";
-import Link from "next/link";
 import { useState } from "react";
+import { EvidenceLink } from "./evidence-link.tsx";
 
 const SEVERITY_CLASS: Record<FindingSeverity, string> = {
   high: "border-[#d1242f] text-[#d1242f]",
@@ -35,7 +34,6 @@ export function FindingCard({
   ) => void;
 }) {
   const [draftNote, setDraftNote] = useState(note ?? "");
-  const documentHref = `/documents/${documentId}` as Route;
   const statusNote = draftNote.trim() !== "" ? draftNote : note;
 
   return (
@@ -72,16 +70,11 @@ export function FindingCard({
             const evidenceKey = `${item.source.pageNumber}-${index}-${item.source.text}`;
             return (
               <li key={evidenceKey}>
-                <Link
-                  className="text-sm underline"
-                  href={{
-                    pathname: documentHref,
-                    query: { page: item.source.pageNumber },
-                    hash: `finding-${finding.id}`,
-                  }}
-                >
-                  {copy.viewPage(item.source.pageNumber)}
-                </Link>
+                <EvidenceLink
+                  documentId={documentId}
+                  page={item.source.pageNumber}
+                  hash={`finding-${finding.id}`}
+                />
                 <span className="ml-2 text-sm text-foreground/60">
                   {item.relevance}
                 </span>
