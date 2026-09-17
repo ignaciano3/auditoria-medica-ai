@@ -343,7 +343,7 @@ export function MedicationsSection({
       {medications.length === 0 ? (
         <RecordEmpty />
       ) : (
-        <ul className="flex list-none flex-col gap-2">
+        <ul className="grid list-none grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {medications.map((medication, index) => (
             <MedicationItem
               key={medicationItemKey(medication, index)}
@@ -383,7 +383,7 @@ export function LaboratorySection({
       {laboratory.length === 0 ? (
         <RecordEmpty />
       ) : (
-        <ul className="flex list-none flex-col gap-2">
+        <ul className="grid list-none grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {laboratory.map((result, index) => (
             <RecordItem
               key={labResultItemKey(result, index)}

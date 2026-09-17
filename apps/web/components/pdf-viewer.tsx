@@ -6,6 +6,7 @@ import {
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
+  viewerAnchorId,
 } from "./pdf-viewer-utils.ts";
 
 const MIN_ZOOM = 0.5;
@@ -45,7 +46,11 @@ export function PdfViewer({
   }
 
   return (
-    <section className="flex flex-col gap-3" data-page={currentPage}>
+    <section
+      id={viewerAnchorId}
+      className="flex scroll-mt-4 flex-col gap-3"
+      data-page={currentPage}
+    >
       <div className="flex items-center gap-2">
         <button
           type="button"

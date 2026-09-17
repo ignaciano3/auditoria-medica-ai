@@ -1,6 +1,8 @@
 import type { PageStatus } from "@audit/domain";
 import { processing, ui } from "@audit/lib/i18n";
 
+export const viewerAnchorId = "pdf-viewer";
+
 export function clampPage(page: number, pageCount: number): number {
   if (!Number.isFinite(pageCount) || pageCount < 1) return 1;
   if (!Number.isFinite(page)) return 1;

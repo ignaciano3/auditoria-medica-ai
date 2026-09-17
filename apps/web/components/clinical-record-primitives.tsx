@@ -40,11 +40,13 @@ export function RecordField({
   value,
   documentId,
   sources,
+  showEvidence = true,
 }: {
   label: string;
   value: string | number | undefined;
   documentId: string;
   sources: Source[];
+  showEvidence?: boolean;
 }) {
   const text = displayValue(value);
   if (text === undefined) return null;
@@ -54,7 +56,9 @@ export function RecordField({
       <dt className="font-semibold text-foreground/70">{label}</dt>
       <dd className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]">
         <span>{text}</span>
-        <EvidenceLinks documentId={documentId} pages={sourcePages(sources)} />
+        {showEvidence ? (
+          <EvidenceLinks documentId={documentId} pages={sourcePages(sources)} />
+        ) : null}
       </dd>
     </>
   );
@@ -63,9 +67,11 @@ export function RecordField({
 export function RecordFields({
   documentId,
   fields,
+  showEvidence = true,
 }: {
   documentId: string;
   fields: RecordFieldSpec[];
+  showEvidence?: boolean;
 }) {
   const visible = fields.filter(
     (field) => displayValue(field.value) !== undefined,
@@ -81,6 +87,7 @@ export function RecordFields({
             value={field.value}
             documentId={documentId}
             sources={field.sources}
+            showEvidence={showEvidence}
           />
         </Fragment>
       ))}
@@ -104,7 +111,11 @@ export function RecordItem({
       {title !== undefined ? (
         <p className="font-semibold [overflow-wrap:anywhere]">{title}</p>
       ) : null}
-      <RecordFields documentId={documentId} fields={fields} />
+      <RecordFields
+        documentId={documentId}
+        fields={fields}
+        showEvidence={false}
+      />
       <EvidenceLinks documentId={documentId} pages={pages} />
     </li>
   );

@@ -1,24 +1,25 @@
 import { findings } from "@audit/lib/i18n";
 import type { Route } from "next";
 import Link from "next/link";
+import { viewerAnchorId } from "./pdf-viewer-utils.ts";
 
 export function EvidenceLink({
   documentId,
   page,
-  hash,
+  hash = viewerAnchorId,
 }: {
   documentId: string;
   page: number;
   hash?: string | undefined;
 }) {
   const pathname = `/documents/${documentId}` as Route;
-  const href =
-    hash !== undefined
-      ? { pathname, query: { page }, hash }
-      : { pathname, query: { page } };
+  const href = { pathname, query: { page }, hash };
 
   return (
-    <Link className="text-sm underline" href={href}>
+    <Link
+      className="rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-sm text-foreground"
+      href={href}
+    >
       {findings.viewPage(page)}
     </Link>
   );

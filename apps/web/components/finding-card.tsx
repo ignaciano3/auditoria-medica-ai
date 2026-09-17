@@ -73,7 +73,6 @@ export function FindingCard({
                 <EvidenceLink
                   documentId={documentId}
                   page={item.source.pageNumber}
-                  hash={`finding-${finding.id}`}
                 />
                 <span className="ml-2 text-sm text-foreground/60">
                   {item.relevance}
