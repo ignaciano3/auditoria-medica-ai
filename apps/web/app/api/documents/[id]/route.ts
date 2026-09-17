@@ -4,9 +4,6 @@ import { getContainer } from "../../../../lib/container.ts";
 import { deleteDocumentById } from "../../../../lib/documents-service.ts";
 import { serializeDocument } from "../../../../lib/serialize-document.ts";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

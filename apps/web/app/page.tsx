@@ -1,11 +1,10 @@
 import { ui } from "@audit/lib/i18n";
+import { io } from "next/cache";
 import { Suspense } from "react";
 import { DocumentList } from "../components/document-list.tsx";
 import { DocumentUploader } from "../components/document-uploader.tsx";
 import { getContainer } from "../lib/container.ts";
 import { serializeDocument } from "../lib/serialize-document.ts";
-
-export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
@@ -20,6 +19,7 @@ export default function Home() {
 }
 
 async function DocumentListSection() {
+  await io();
   const rows = await getContainer().documents.list();
   const documents = rows.map((row) => serializeDocument(row));
   return <DocumentList initialDocuments={documents} />;

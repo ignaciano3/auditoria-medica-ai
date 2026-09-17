@@ -9,9 +9,6 @@ import {
 } from "../../../lib/documents-service.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export { maxUploadBytes, type UploadMeta, validateUpload };
 
 export async function POST(request: Request): Promise<Response> {

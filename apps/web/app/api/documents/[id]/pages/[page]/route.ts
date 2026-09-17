@@ -2,9 +2,6 @@ import { errors } from "@audit/lib";
 import { NextResponse } from "next/server";
 import { getContainer } from "../../../../../../lib/container.ts";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string; page: string }> },

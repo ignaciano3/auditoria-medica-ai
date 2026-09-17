@@ -1,4 +1,5 @@
 import { ui } from "@audit/lib/i18n";
+import { io } from "next/cache";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
@@ -6,8 +7,6 @@ import { DocumentStatusBadge } from "../../../components/document-status-badge.t
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 import { getContainer } from "../../../lib/container.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
-
-export const dynamic = "force-dynamic";
 
 export default function DocumentDetailPage({
   params,
@@ -25,6 +24,7 @@ async function DocumentContent({
   params,
 }: Pick<PageProps<"/documents/[id]">, "params">) {
   const { id } = await params;
+  await io();
   const container = getContainer();
   const row = await container.documents.getById(id);
   if (!row) notFound();
