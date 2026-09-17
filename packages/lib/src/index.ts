@@ -21,3 +21,7 @@ export {
   S3Storage,
 } from "./storage/s3-storage.ts";
 export type { StorageProvider } from "./storage/storage-provider.ts";
+export {
+  LLMOutputValidationError,
+  validateLLMOutput,
+} from "./validation/llm-output.ts";
