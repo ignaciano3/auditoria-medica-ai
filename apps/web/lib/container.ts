@@ -2,6 +2,7 @@ import {
   createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
+  createFindingReviewRepository,
   getDb,
 } from "@audit/db";
 import {
@@ -17,11 +18,13 @@ type DocumentPageRepository = ReturnType<typeof createDocumentPageRepository>;
 type ClinicalRecordRepository = ReturnType<
   typeof createClinicalRecordRepository
 >;
+type FindingReviewRepository = ReturnType<typeof createFindingReviewRepository>;
 
 export type Container = {
   documents: DocumentRepository;
   pages: DocumentPageRepository;
   clinicalRecords: ClinicalRecordRepository;
+  findingReviews: FindingReviewRepository;
   storage: StorageProvider;
   queue: JobQueue;
 };
@@ -36,6 +39,7 @@ export function getContainer(): Container {
       documents: createDocumentRepository(db),
       pages: createDocumentPageRepository(db),
       clinicalRecords: createClinicalRecordRepository(db),
+      findingReviews: createFindingReviewRepository(db),
       storage: new S3Storage({
         endpoint: env.S3_ENDPOINT,
         bucket: env.S3_BUCKET,

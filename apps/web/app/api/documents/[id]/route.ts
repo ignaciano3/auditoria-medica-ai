@@ -14,13 +14,16 @@ export async function GET(
   if (!row) {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
   }
-  const [clinical, pages] = await Promise.all([
+  const [clinical, pages, reviews] = await Promise.all([
     container.clinicalRecords.getByDocument(id),
     container.pages.listForDocument(id),
+    container.findingReviews.listForDocument(id),
   ]);
   return NextResponse.json({
     document: serializeDocument(row),
     record: clinical?.record ?? null,
+    findings: clinical?.findings ?? [],
+    reviews,
     extractionIncomplete: clinical?.extractionIncomplete ?? false,
     failedChunkCount: clinical?.failedChunkCount ?? 0,
     pages: pages.map((page) => ({
