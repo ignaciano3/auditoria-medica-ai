@@ -57,9 +57,9 @@ services:
       S3_SECRET_KEY: minio123
       # Local mode: LLM_PROVIDER=heuristic, OCR_PROVIDER=local, no OPENAI_API_KEY.
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4.1}
-      OCR_PROVIDER: ${OCR_PROVIDER:-openai}
-      OCR_MODEL: ${OCR_MODEL:-gpt-4.1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-5.6-terra}
+      OCR_PROVIDER: ${OCR_PROVIDER:-tesseract}
+      OCR_MODEL: ${OCR_MODEL:-gpt-5.6-luna}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DOCUMENT_RETENTION_DAYS: 30
     depends_on:

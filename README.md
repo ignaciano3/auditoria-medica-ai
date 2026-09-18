@@ -62,7 +62,7 @@ OCR_PROVIDER=local
 OPENAI_API_KEY=      # vacío: no se usa
 ```
 
-`OPENAI_API_KEY` solo es obligatoria cuando `LLM_PROVIDER` u `OCR_PROVIDER` es `openai`. El worker dentro de Compose ya incluye `tesseract-ocr` + `tesseract-ocr-spa`; el clasificador local marca todas las páginas como portadoras de datos, así que las planillas manuscritas se transcriben en vez de omitirse.
+`OPENAI_API_KEY` es obligatoria cuando `LLM_PROVIDER` es `openai` o `OCR_PROVIDER` es `openai`/`tesseract` (Tesseract transcribe localmente, pero la clasificación de páginas usa el modelo de visión). El worker dentro de Compose ya incluye `tesseract-ocr` + `tesseract-ocr-spa`; el clasificador local marca todas las páginas como portadoras de datos, así que las planillas manuscritas se transcriben en vez de omitirse.
 
 El bucket de MinIO (`documents`) y las tablas se crean solos con los servicios `minio-init` y `migrate` de Compose. Para correr las migraciones a mano:
 
@@ -104,9 +104,9 @@ Referencia en `.env.example`:
 | `S3_ENDPOINT` | Endpoint de MinIO/S3 |
 | `S3_BUCKET` | Bucket de documentos (`documents`) |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Credenciales S3/MinIO |
-| `LLM_PROVIDER` / `LLM_MODEL` | Proveedor y modelo para extracción (`openai` \| `heuristic`) |
-| `OCR_PROVIDER` / `OCR_MODEL` | Proveedor y modelo para OCR (`openai` \| `tesseract` \| `local`) |
-| `OPENAI_API_KEY` | Clave de OpenAI (obligatoria solo si algún proveedor es `openai`) |
+| `LLM_PROVIDER` / `LLM_MODEL` | Proveedor y modelo para extracción (`openai` \| `heuristic`). Modelo por defecto: `gpt-5.6-terra` |
+| `OCR_PROVIDER` / `OCR_MODEL` | Proveedor y modelo para OCR (`openai` \| `tesseract` \| `local`). Por defecto `tesseract`; `OCR_MODEL` (`gpt-5.6-luna`) se usa para clasificar páginas |
+| `OPENAI_API_KEY` | Clave de OpenAI (obligatoria si `LLM_PROVIDER` es `openai` o `OCR_PROVIDER` es `openai`/`tesseract`) |
 | `DOCUMENT_RETENTION_DAYS` | Retención de documentos |
 
 Notas:

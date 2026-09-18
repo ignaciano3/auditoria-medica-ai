@@ -28,12 +28,17 @@ function createOcrProvider(env: ReturnType<typeof getEnv>) {
         classifier: new OpenAIVisionOCRProvider({
           apiKey: env.OPENAI_API_KEY,
           model: env.OCR_MODEL,
+          classifyDetail: "low",
+          reasoningEffort: "low",
         }),
       });
     default:
       return new OpenAIVisionOCRProvider({
         apiKey: env.OPENAI_API_KEY,
         model: env.OCR_MODEL,
+        classifyDetail: "low",
+        transcribeDetail: "high",
+        reasoningEffort: "low",
       });
   }
 }
@@ -67,6 +72,7 @@ async function main(): Promise<void> {
         : new OpenAIProvider({
             apiKey: env.OPENAI_API_KEY,
             model: env.LLM_MODEL,
+            reasoningEffort: "low",
           }),
     clinicalRecords: createClinicalRecordRepository(db),
     logger,

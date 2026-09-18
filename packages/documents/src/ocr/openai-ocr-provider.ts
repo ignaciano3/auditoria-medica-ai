@@ -11,6 +11,8 @@ type ChatCompletionResponse = {
   choices: Array<{ message: { content: string | null } }>;
 };
 
+export type ImageDetail = "low" | "high" | "auto" | "original";
+
 export type OpenAICompatibleClient = {
   chat: {
     completions: {
@@ -53,6 +55,9 @@ function parseClassification(content: string | null): PageClassification {
 export class OpenAIVisionOCRProvider implements OCRProvider {
   private readonly model: string;
   private readonly apiKey: string;
+  private readonly classifyDetail: ImageDetail;
+  private readonly transcribeDetail: ImageDetail;
+  private readonly reasoningEffort: string;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -60,10 +65,16 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
     apiKey: string;
     model: string;
     client?: OpenAICompatibleClient;
+    classifyDetail?: ImageDetail;
+    transcribeDetail?: ImageDetail;
+    reasoningEffort?: string;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
     this.injectedClient = options.client;
+    this.classifyDetail = options.classifyDetail ?? "low";
+    this.transcribeDetail = options.transcribeDetail ?? "high";
+    this.reasoningEffort = options.reasoningEffort ?? "low";
   }
 
   private get client(): OpenAICompatibleClient {
@@ -80,6 +91,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
   async classifyPage(input: PageImage): Promise<PageClassification> {
     const response = await this.client.chat.completions.create({
       model: this.model,
+      reasoning_effort: this.reasoningEffort,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -91,7 +103,13 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
           role: "user",
           content: [
             { type: "text", text: "Classify this page." },
-            { type: "image_url", image_url: { url: toDataUrl(input.png) } },
+            {
+              type: "image_url",
+              image_url: {
+                url: toDataUrl(input.png),
+                detail: this.classifyDetail,
+              },
+            },
           ],
         },
       ],
@@ -102,6 +120,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
   async transcribePage(input: PageImage): Promise<string> {
     const response = await this.client.chat.completions.create({
       model: this.model,
+      reasoning_effort: this.reasoningEffort,
       messages: [
         {
           role: "system",
@@ -112,7 +131,13 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
           role: "user",
           content: [
             { type: "text", text: "Transcribe this page." },
-            { type: "image_url", image_url: { url: toDataUrl(input.png) } },
+            {
+              type: "image_url",
+              image_url: {
+                url: toDataUrl(input.png),
+                detail: this.transcribeDetail,
+              },
+            },
           ],
         },
       ],

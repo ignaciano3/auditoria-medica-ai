@@ -44,12 +44,15 @@ const validFinding = {
 function sequencedClient(contents: Array<string | null>): {
   client: OpenAICompatibleClient;
   calls: () => number;
+  requests: Array<Record<string, unknown>>;
 } {
   let calls = 0;
+  const requests: Array<Record<string, unknown>> = [];
   const client: OpenAICompatibleClient = {
     chat: {
       completions: {
-        create: async () => {
+        create: async (input) => {
+          requests.push(input);
           const index = Math.min(calls, contents.length - 1);
           calls += 1;
           return {
@@ -59,11 +62,11 @@ function sequencedClient(contents: Array<string | null>): {
       },
     },
   };
-  return { client, calls: () => calls };
+  return { client, calls: () => calls, requests };
 }
 
 function provider(client: OpenAICompatibleClient): OpenAIProvider {
-  return new OpenAIProvider({ apiKey: "t", model: "gpt-4.1", client });
+  return new OpenAIProvider({ apiKey: "t", model: "gpt-5.6-terra", client });
 }
 
 describe("OpenAIProvider.extractClinicalRecord", () => {
@@ -85,6 +88,12 @@ describe("OpenAIProvider.extractClinicalRecord", () => {
     } catch (error) {
       expect((error as Error).message).not.toContain(sentinel);
     }
+  });
+
+  test("requests low reasoning effort", async () => {
+    const fake = sequencedClient([JSON.stringify(validRecord)]);
+    await provider(fake.client).extractClinicalRecord([page]);
+    expect(fake.requests[0]?.reasoning_effort).toBe("low");
   });
 });
 

@@ -86,6 +86,7 @@ function parseFindings(content: string | null): Finding[] | undefined {
 export class OpenAIProvider implements LLMProvider {
   private readonly model: string;
   private readonly apiKey: string;
+  private readonly reasoningEffort: string;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -93,10 +94,12 @@ export class OpenAIProvider implements LLMProvider {
     apiKey: string;
     model: string;
     client?: OpenAICompatibleClient;
+    reasoningEffort?: string;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
     this.injectedClient = options.client;
+    this.reasoningEffort = options.reasoningEffort ?? "low";
   }
 
   private get client(): OpenAICompatibleClient {
@@ -128,6 +131,7 @@ export class OpenAIProvider implements LLMProvider {
     }
     const request: Record<string, unknown> = {
       model: this.model,
+      reasoning_effort: this.reasoningEffort,
       messages,
     };
     if (jsonObject) {
