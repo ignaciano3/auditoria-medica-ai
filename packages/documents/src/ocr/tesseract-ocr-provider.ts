@@ -4,6 +4,7 @@ import type {
   PageClassifier,
   PageImage,
 } from "./ocr-provider.ts";
+import { orientPng } from "./orientation.ts";
 
 export type TesseractRecognize = (
   image: Uint8Array | string,
@@ -18,11 +19,13 @@ export const DEFAULT_TESSERACT_OPTIONS = {
 export class TesseractOCRProvider implements OCRProvider {
   private readonly classifier: PageClassifier;
   private readonly recognize: TesseractRecognize;
+  private readonly orient: (png: Uint8Array) => Promise<Uint8Array>;
   private readonly options: Record<string, unknown>;
 
   constructor(options: {
     classifier: PageClassifier;
     recognize?: TesseractRecognize;
+    orient?: (png: Uint8Array) => Promise<Uint8Array>;
     lang?: string;
     psm?: number;
   }) {
@@ -33,6 +36,7 @@ export class TesseractOCRProvider implements OCRProvider {
         const { recognize } = await import("node-tesseract-ocr");
         return recognize(image as Parameters<typeof recognize>[0], ocrOptions);
       });
+    this.orient = options.orient ?? ((png) => orientPng(png, this.recognize));
     this.options = {
       lang: options.lang ?? DEFAULT_TESSERACT_OPTIONS.lang,
       psm: options.psm ?? DEFAULT_TESSERACT_OPTIONS.psm,
@@ -44,6 +48,7 @@ export class TesseractOCRProvider implements OCRProvider {
   }
 
   async transcribePage(input: PageImage): Promise<string> {
-    return (await this.recognize(input.png, this.options)).trim();
+    const oriented = await this.orient(input.png);
+    return (await this.recognize(oriented, this.options)).trim();
   }
 }

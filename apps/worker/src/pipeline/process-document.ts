@@ -82,6 +82,7 @@ export type ProcessDocumentDeps = {
   pages: PagesDependency;
   storage: StorageProvider;
   ocr: OCRProvider;
+  handwrittenOcr?: OCRProvider | undefined;
   provider: LLMProvider;
   clinicalRecords: ClinicalRecordsDependency;
   render?: RenderPages;
@@ -135,7 +136,9 @@ async function resolvePage(
     });
     return skipped;
   }
-  const text = await deps.ocr.transcribePage({
+  const transcriptionProvider =
+    page.handwritten && deps.handwrittenOcr ? deps.handwrittenOcr : deps.ocr;
+  const text = await transcriptionProvider.transcribePage({
     pageNumber: page.pageNumber,
     png,
   });

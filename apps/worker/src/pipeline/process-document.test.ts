@@ -110,6 +110,7 @@ function makeDeps(options: {
   storagePut?: (key: string) => Promise<void>;
   classifyPage?: (input: PageImage) => Promise<PageClassification>;
   transcribePage?: (input: PageImage) => Promise<string>;
+  handwrittenTranscribePage?: (input: PageImage) => Promise<string>;
   record?: ClinicalRecord;
   findings?: Finding[];
   analyzeError?: Error;
@@ -191,6 +192,12 @@ function makeDeps(options: {
       transcribePage:
         options.transcribePage ?? (() => Promise.resolve("texto")),
     },
+    handwrittenOcr: options.handwrittenTranscribePage
+      ? {
+          classifyPage: () => Promise.resolve(evolution),
+          transcribePage: options.handwrittenTranscribePage,
+        }
+      : undefined,
     provider,
     clinicalRecords: {
       upsert: (documentId, record, findings, indexed, extraction) => {
@@ -545,5 +552,41 @@ describe("createProcessDocument", () => {
       .sort();
 
     expect(forwardIds).toEqual(backwardIds);
+  });
+
+  test("routes handwritten pages to the handwritten transcriber", async () => {
+    const deps = makeDeps({
+      classifyPage: ({ pageNumber }) =>
+        Promise.resolve(
+          pageNumber === 1
+            ? { docType: "evolution", handwritten: true, dataBearing: true }
+            : evolution,
+        ),
+      transcribePage: () => Promise.resolve("printed"),
+      handwrittenTranscribePage: () => Promise.resolve("manuscrito"),
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const pages = deps.saved[0] ?? [];
+    expect(pages[0]?.text).toBe("manuscrito");
+    expect(pages[1]?.text).toBe("printed");
+  });
+
+  test("uses the default OCR for handwritten pages without a handwritten transcriber", async () => {
+    const deps = makeDeps({
+      classifyPage: () =>
+        Promise.resolve({
+          docType: "evolution",
+          handwritten: true,
+          dataBearing: true,
+        }),
+      transcribePage: () => Promise.resolve("tesseract"),
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const pages = deps.saved[0] ?? [];
+    expect(pages.map((page) => page.text)).toEqual(["tesseract", "tesseract"]);
   });
 });
