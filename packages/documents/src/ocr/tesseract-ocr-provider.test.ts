@@ -19,6 +19,8 @@ function fakeTesseract(text: string): TesseractRecognize {
   return async () => text;
 }
 
+const noRotation = async (png: Uint8Array) => png;
+
 const page = { pageNumber: 1, png: new Uint8Array([1, 2]) };
 
 describe("TesseractOCRProvider", () => {
@@ -38,6 +40,7 @@ describe("TesseractOCRProvider", () => {
         dataBearing: true,
       }),
       recognize,
+      orient: noRotation,
     });
     const result = await provider.transcribePage(page);
     expect(result).toBe("Historia clínica");
@@ -58,6 +61,7 @@ describe("TesseractOCRProvider", () => {
         calls.push(options ?? {});
         return "text";
       },
+      orient: noRotation,
     });
     await provider.transcribePage(page);
     expect(calls[0]?.psm).toBe(1);
@@ -75,6 +79,7 @@ describe("TesseractOCRProvider", () => {
         calls.push(options ?? {});
         return "text";
       },
+      orient: noRotation,
       psm: 6,
     });
     await provider.transcribePage(page);
@@ -107,8 +112,30 @@ describe("TesseractOCRProvider", () => {
         dataBearing: true,
       }),
       recognize: fakeTesseract("   "),
+      orient: noRotation,
     });
     const result = await provider.transcribePage(page);
     expect(result).toBe("");
+  });
+
+  test("transcribes the oriented image", async () => {
+    const oriented = new Uint8Array([9, 9]);
+    const images: Uint8Array[] = [];
+    const provider = new TesseractOCRProvider({
+      classifier: fakeClassifier({
+        docType: "lab",
+        handwritten: false,
+        dataBearing: true,
+      }),
+      orient: async () => oriented,
+      recognize: async (image) => {
+        images.push(image as Uint8Array);
+        return "text";
+      },
+    });
+
+    await provider.transcribePage(page);
+
+    expect(images).toEqual([oriented]);
   });
 });

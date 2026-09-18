@@ -7,6 +7,7 @@ import {
 } from "@audit/db";
 import {
   LocalPageClassifier,
+  type OCRProvider,
   OpenAIVisionOCRProvider,
   renderPdfPages,
   TesseractOCRProvider,
@@ -17,29 +18,40 @@ import {
   type ProcessingLogger,
 } from "./pipeline/process-document.ts";
 
-function createOcrProvider(env: ReturnType<typeof getEnv>) {
+function createOcrProvider(env: ReturnType<typeof getEnv>): {
+  ocr: OCRProvider;
+  handwrittenOcr?: OCRProvider;
+} {
   switch (env.OCR_PROVIDER) {
     case "local":
-      return new TesseractOCRProvider({
-        classifier: new LocalPageClassifier(),
-      });
-    case "tesseract":
-      return new TesseractOCRProvider({
-        classifier: new OpenAIVisionOCRProvider({
-          apiKey: env.OPENAI_API_KEY,
-          model: env.OCR_MODEL,
-          classifyDetail: "low",
-          reasoningEffort: "low",
+      return {
+        ocr: new TesseractOCRProvider({
+          classifier: new LocalPageClassifier(),
         }),
-      });
-    default:
-      return new OpenAIVisionOCRProvider({
+      };
+    case "tesseract": {
+      const vision = new OpenAIVisionOCRProvider({
         apiKey: env.OPENAI_API_KEY,
         model: env.OCR_MODEL,
         classifyDetail: "low",
         transcribeDetail: "high",
         reasoningEffort: "low",
       });
+      return {
+        ocr: new TesseractOCRProvider({ classifier: vision }),
+        handwrittenOcr: vision,
+      };
+    }
+    default:
+      return {
+        ocr: new OpenAIVisionOCRProvider({
+          apiKey: env.OPENAI_API_KEY,
+          model: env.OCR_MODEL,
+          classifyDetail: "low",
+          transcribeDetail: "high",
+          reasoningEffort: "low",
+        }),
+      };
   }
 }
 
@@ -55,6 +67,7 @@ const logger: ProcessingLogger = {
 async function main(): Promise<void> {
   const env = getEnv();
   const db = getDb(env.DATABASE_URL);
+  const { ocr, handwrittenOcr } = createOcrProvider(env);
   const processDocument = createProcessDocument({
     documents: createDocumentRepository(db),
     pages: createDocumentPageRepository(db),
@@ -65,7 +78,8 @@ async function main(): Promise<void> {
       secretKey: env.S3_SECRET_KEY,
     }),
     render: renderPdfPages,
-    ocr: createOcrProvider(env),
+    ocr,
+    handwrittenOcr,
     provider:
       env.LLM_PROVIDER === "heuristic"
         ? new HeuristicLLMProvider()
