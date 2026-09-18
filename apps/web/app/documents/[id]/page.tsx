@@ -1,3 +1,4 @@
+import type { ClinicalRecordWithFindings, FindingReview } from "@audit/db";
 import { ui } from "@audit/lib/i18n";
 import { io } from "next/cache";
 import Link from "next/link";
@@ -9,8 +10,10 @@ import { DocumentStatusBadge } from "../../../components/document-status-badge.t
 import { FindingsSection } from "../../../components/findings-section.tsx";
 import { ArrowLeftIcon } from "../../../components/icons.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
+import { DetailSkeleton } from "../../../components/skeletons.tsx";
 import { buttonVariants } from "../../../components/ui/button.tsx";
 import { Callout } from "../../../components/ui/callout.tsx";
+import { getClinicalData } from "../../../lib/cached-data.ts";
 import { getContainer } from "../../../lib/container.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
@@ -20,9 +23,18 @@ export default function DocumentDetailPage({
 }: PageProps<"/documents/[id]">) {
   return (
     <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-3 py-6 sm:px-4">
-      <Suspense
-        fallback={<p className="text-sm text-muted-foreground">{ui.loading}</p>}
+      <Link
+        className={buttonVariants({
+          variant: "ghost",
+          size: "sm",
+          className: "-ml-2 w-fit text-muted-foreground",
+        })}
+        href="/"
       >
+        <ArrowLeftIcon className="size-4" />
+        {ui.appTitle}
+      </Link>
+      <Suspense fallback={<DetailSkeleton />}>
         <DocumentContent params={params} searchParams={searchParams} />
       </Suspense>
     </main>
@@ -40,11 +52,24 @@ async function DocumentContent({
   const row = await container.documents.getById(id);
   if (!row) notFound();
 
-  const [clinical, pages, reviews] = await Promise.all([
-    container.clinicalRecords.getByDocument(id),
-    container.pages.listForDocument(id),
-    container.findingReviews.listForDocument(id),
-  ]);
+  const pages = await container.pages.listForDocument(id);
+
+  // Clinical data and reviews are immutable once the document is ready, so we
+  // read them through the cache (tagged per document, invalidated on review).
+  // While the worker is still writing, read straight from the database.
+  let clinical: ClinicalRecordWithFindings | null;
+  let reviews: FindingReview[];
+  if (row.status === "ready") {
+    const cached = await getClinicalData(id);
+    clinical = cached?.clinical ?? null;
+    reviews = cached?.reviews ?? [];
+  } else {
+    [clinical, reviews] = await Promise.all([
+      container.clinicalRecords.getByDocument(id),
+      container.findingReviews.listForDocument(id),
+    ]);
+  }
+
   const doc = serializeDocument(row);
   const failedPages = pages
     .filter((page) => page.status === "failed")
@@ -57,17 +82,6 @@ async function DocumentContent({
 
   return (
     <>
-      <Link
-        className={buttonVariants({
-          variant: "ghost",
-          size: "sm",
-          className: "-ml-2 w-fit text-muted-foreground",
-        })}
-        href="/"
-      >
-        <ArrowLeftIcon className="size-4" />
-        {ui.appTitle}
-      </Link>
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="flex-1 text-xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-2xl">
           {doc.originalFilename}

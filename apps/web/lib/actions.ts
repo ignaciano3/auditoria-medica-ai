@@ -1,7 +1,8 @@
 "use server";
 
 import { errors } from "@audit/lib";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { DOCUMENTS_TAG, documentTag } from "./cache-tags.ts";
 import { getContainer } from "./container.ts";
 import {
   createUploadedDocument,
@@ -23,13 +24,18 @@ export async function uploadDocument(
   if (!result.ok) {
     return { ok: false, error: result.error };
   }
+  revalidateTag(DOCUMENTS_TAG, "max");
   revalidatePath("/");
   return { ok: true };
 }
 
 export async function deleteDocument(id: string): Promise<void> {
   const removed = await deleteDocumentById(getContainer(), id);
-  if (removed) revalidatePath("/");
+  if (removed) {
+    revalidateTag(DOCUMENTS_TAG, "max");
+    revalidateTag(documentTag(id), "max");
+    revalidatePath("/");
+  }
 }
 
 export type FindingReviewActionResult =
@@ -40,6 +46,9 @@ export async function setFindingReview(
   input: ReviewInput,
 ): Promise<FindingReviewActionResult> {
   const result = await saveFindingReview(getContainer(), input);
-  if (result.ok) revalidatePath("/documents/[id]", "page");
+  if (result.ok) {
+    revalidateTag(documentTag(input.documentId), "max");
+    revalidatePath("/documents/[id]", "page");
+  }
   return result;
 }

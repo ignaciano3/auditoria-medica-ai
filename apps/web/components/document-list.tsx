@@ -99,6 +99,7 @@ export function DocumentList({
           <Link
             className="flex-1 font-medium [overflow-wrap:anywhere] transition-colors group-hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             href={`/documents/${doc.id}`}
+            prefetch={true}
           >
             {doc.originalFilename}
           </Link>
