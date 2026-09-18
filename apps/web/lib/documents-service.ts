@@ -69,7 +69,10 @@ export async function createUploadedDocument(
       originalKey: key,
     });
     await deps.queue.start();
-    await deps.queue.publish({ documentId: document.id });
+    await deps.queue.publish({
+      kind: "process-document",
+      documentId: document.id,
+    });
     return { ok: true, id: document.id, status: document.status };
   } catch {
     await deps.storage.delete(key).catch(() => undefined);

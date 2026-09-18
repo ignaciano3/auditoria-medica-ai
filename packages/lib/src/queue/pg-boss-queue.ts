@@ -2,7 +2,7 @@ import { PgBoss } from "pg-boss";
 import {
   type JobQueue,
   PROCESS_DOCUMENT_JOB,
-  type ProcessDocumentJob,
+  type QueueJob,
 } from "./job-queue.ts";
 
 export class QueuePublishError extends Error {
@@ -38,19 +38,14 @@ export class PgBossQueue implements JobQueue {
     await this.boss.stop();
   }
 
-  async publish(job: ProcessDocumentJob): Promise<void> {
+  async publish(job: QueueJob): Promise<void> {
     const jobId = await this.boss.send(PROCESS_DOCUMENT_JOB, job);
     if (jobId === null) throw new QueuePublishError();
   }
 
-  async handle(
-    handler: (job: ProcessDocumentJob) => Promise<void>,
-  ): Promise<void> {
-    await this.boss.work<ProcessDocumentJob>(
-      PROCESS_DOCUMENT_JOB,
-      async ([job]) => {
-        if (job) await handler(job.data);
-      },
-    );
+  async handle(handler: (job: QueueJob) => Promise<void>): Promise<void> {
+    await this.boss.work<QueueJob>(PROCESS_DOCUMENT_JOB, async ([job]) => {
+      if (job) await handler(job.data);
+    });
   }
 }

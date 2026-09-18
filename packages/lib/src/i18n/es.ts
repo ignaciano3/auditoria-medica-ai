@@ -40,6 +40,8 @@ export const errors = {
   invalidFinding: "Hallazgo no válido.",
   invalidReviewStatus: "Estado de revisión no válido.",
   noteTooLong: "La nota no puede superar los 2000 caracteres.",
+  redoTranscriptionFailed: "No se pudo rehacer la transcripción.",
+  reExtractFailed: "No se pudo reextraer la información.",
 } as const;
 
 export function deleteConfirm(filename: string): string {
@@ -171,6 +173,10 @@ export const ui = {
   noPages: "El documento no tiene páginas.",
   transcription: "Transcripción",
   noTranscription: "La página no tiene texto transcrito.",
+  redoTranscription: "Rehacer transcripción",
+  redoTranscriptionPending: "Rehaciendo…",
+  reExtract: "Reextraer información",
+  reExtractPending: "Reextrayendo…",
   previousPage: "Anterior",
   nextPage: "Siguiente",
   zoomIn: "Acercar",

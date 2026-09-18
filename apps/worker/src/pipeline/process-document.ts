@@ -1,31 +1,25 @@
-import {
-  chunkPages,
-  type LLMProvider,
-  mapExtract,
-  reduceRecords,
-  stampFindingProvenance,
-  stampProvenance,
-} from "@audit/ai";
+import type { LLMProvider } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import {
   classifyPages,
   type OCRProvider,
   renderPdfPages,
 } from "@audit/documents";
-import {
-  assignStableFindingIds,
-  type ClinicalRecord,
-  clinicalRecordSchema,
-  type DocumentPage,
-  type DocumentStatus,
-  type Finding,
+import type {
+  ClinicalRecord,
+  DocumentPage,
+  DocumentStatus,
+  Finding,
 } from "@audit/domain";
+import { errors, processing, type StorageProvider } from "@audit/lib";
 import {
-  errors,
-  type ProcessDocumentJob,
-  processing,
-  type StorageProvider,
-} from "@audit/lib";
+  ExtractionFailedError,
+  noopLogger,
+  type ProcessingLogger,
+  runExtraction,
+} from "./extraction.ts";
+
+export { ExtractionFailedError, type ProcessingLogger } from "./extraction.ts";
 
 type RenderedPage = {
   pageNumber: number;
@@ -34,19 +28,7 @@ type RenderedPage = {
   height: number;
 };
 
-export class ExtractionFailedError extends Error {
-  constructor() {
-    super("All extraction chunks failed");
-    this.name = "ExtractionFailedError";
-  }
-}
-
 type RenderPages = (bytes: Uint8Array) => Promise<RenderedPage[]>;
-
-export type ProcessingLogger = {
-  info(event: Record<string, unknown>): void;
-  error(event: Record<string, unknown>): void;
-};
 
 type DocumentRecord = { id: string; originalKey: string };
 
@@ -87,11 +69,6 @@ export type ProcessDocumentDeps = {
   clinicalRecords: ClinicalRecordsDependency;
   render?: RenderPages;
   logger?: ProcessingLogger;
-};
-
-const noopLogger: ProcessingLogger = {
-  info: () => undefined,
-  error: () => undefined,
 };
 
 function pageImageKey(documentId: string, pageNumber: number): string {
@@ -193,7 +170,7 @@ async function processAllPages(
 
 export function createProcessDocument(
   deps: ProcessDocumentDeps,
-): (job: ProcessDocumentJob) => Promise<void> {
+): (job: { documentId: string }) => Promise<void> {
   const render = deps.render ?? renderPdfPages;
   const logger = deps.logger ?? noopLogger;
 
@@ -219,68 +196,7 @@ export function createProcessDocument(
 
       await deps.pages.replaceForDocument(documentId, processedPages);
 
-      const dataBearingPages = processedPages.filter(
-        (page) =>
-          page.dataBearing &&
-          (page.status === "vision" || page.status === "text"),
-      );
-      if (dataBearingPages.length === 0) {
-        logger.error({ event: "no_extractable_text", documentId });
-        await deps.documents.updateStatus(
-          documentId,
-          "error",
-          errors.noExtractableText,
-        );
-        return;
-      }
-
-      await deps.documents.updateStatus(documentId, "extracting");
-
-      const chunks = chunkPages(processedPages);
-      let failedChunks = 0;
-      const records = await mapExtract(chunks, deps.provider, {
-        onChunkError: (chunkIndex) => {
-          failedChunks += 1;
-          logger.error({ event: "chunk_failed", documentId, chunkIndex });
-        },
-      });
-      if (chunks.length > 0 && failedChunks === chunks.length) {
-        throw new ExtractionFailedError();
-      }
-      const merged = stampProvenance(reduceRecords(records), documentId);
-      const validated = clinicalRecordSchema.parse(merged) as ClinicalRecord;
-
-      let extractionIncomplete = failedChunks > 0;
-      let findings: Finding[] = [];
-      try {
-        findings = await deps.provider.analyzeClinicalRecord(validated);
-      } catch {
-        extractionIncomplete = true;
-        logger.error({ event: "findings_failed", documentId });
-      }
-      findings = stampFindingProvenance(findings, documentId);
-      findings = assignStableFindingIds(findings);
-
-      const indexed: ClinicalRecordIndex = {};
-      if (validated.patient.name !== undefined) {
-        indexed.patientName = validated.patient.name.value;
-      }
-      if (validated.hospitalization.admissionDate !== undefined) {
-        indexed.admissionDate = validated.hospitalization.admissionDate.value;
-      }
-      if (validated.hospitalization.dischargeDate !== undefined) {
-        indexed.dischargeDate = validated.hospitalization.dischargeDate.value;
-      }
-
-      await deps.clinicalRecords.upsert(
-        documentId,
-        validated,
-        findings,
-        indexed,
-        { extractionIncomplete, failedChunkCount: failedChunks },
-      );
-      await deps.documents.updateStatus(documentId, "ready");
-      logger.info({ event: "document_ready", documentId });
+      await runExtraction(deps, documentId, processedPages);
     } catch (error) {
       logger.error({ event: "document_failed", documentId });
       const message =

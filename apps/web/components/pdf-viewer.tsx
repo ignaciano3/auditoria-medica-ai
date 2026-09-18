@@ -1,14 +1,19 @@
 "use client";
 
+import type { PageStatus } from "@audit/domain";
 import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { redoPageTranscription } from "../lib/actions.ts";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MinusIcon,
   PlusIcon,
+  RefreshIcon,
 } from "./icons.tsx";
 import {
+  canRedoTranscription,
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
@@ -19,6 +24,15 @@ import { Button } from "./ui/button.tsx";
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 90_000;
+
+type RedoState = {
+  pageNumber: number;
+  status: PageStatus;
+  text: string;
+  sawPending: boolean;
+};
 
 export function PdfViewer({
   documentId,
@@ -31,8 +45,11 @@ export function PdfViewer({
   initialPage: number;
   pages: PageTranscriptInput[];
 }) {
+  const router = useRouter();
   const [page, setPage] = useState(() => clampPage(initialPage, pageCount));
   const [zoom, setZoom] = useState(1);
+  const [redo, setRedo] = useState<RedoState | null>(null);
+  const [redoError, setRedoError] = useState<string | null>(null);
 
   useEffect(() => {
     setPage(clampPage(initialPage, pageCount));
@@ -44,12 +61,51 @@ export function PdfViewer({
   const canZoomOut = zoom > MIN_ZOOM;
   const canZoomIn = zoom < MAX_ZOOM;
 
-  const transcript = pageTranscript(
-    pages.find((entry) => entry.pageNumber === currentPage),
-  );
+  const pageInput = pages.find((entry) => entry.pageNumber === currentPage);
+  const transcript = pageTranscript(pageInput);
+  const canRedo = canRedoTranscription(pageInput);
+  const redoActive = redo !== null;
+
+  useEffect(() => {
+    if (redo === null) return;
+    const target = pages.find((entry) => entry.pageNumber === redo.pageNumber);
+    if (target === undefined) return;
+    if (target.status === "pending") {
+      if (!redo.sawPending) setRedo({ ...redo, sawPending: true });
+      return;
+    }
+    const changed = target.status !== redo.status || target.text !== redo.text;
+    if (changed || redo.sawPending) setRedo(null);
+  }, [pages, redo]);
+
+  useEffect(() => {
+    if (!redoActive) return;
+    const timer = setInterval(() => router.refresh(), POLL_INTERVAL_MS);
+    const timeout = setTimeout(() => setRedo(null), POLL_TIMEOUT_MS);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(timeout);
+    };
+  }, [redoActive, router]);
 
   function goToPage(next: number) {
     setPage(clampPage(next, pageCount));
+  }
+
+  async function handleRedo() {
+    if (pageInput === undefined) return;
+    setRedoError(null);
+    setRedo({
+      pageNumber: currentPage,
+      status: pageInput.status,
+      text: pageInput.text,
+      sawPending: false,
+    });
+    const result = await redoPageTranscription(documentId, currentPage);
+    if (!result.ok) {
+      setRedo(null);
+      setRedoError(result.error);
+    }
   }
 
   return (
@@ -125,9 +181,27 @@ export function PdfViewer({
         </div>
         <div className="relative">
           <aside className="flex flex-col gap-2 overflow-auto rounded-xl border border-border bg-surface p-4 lg:absolute lg:inset-0">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              {ui.transcription}
-            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                {ui.transcription}
+              </h2>
+              {canRedo ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={redoActive}
+                  onClick={handleRedo}
+                  aria-label={ui.redoTranscription}
+                >
+                  <RefreshIcon className="size-4" />
+                  <span className="hidden sm:inline">
+                    {redoActive
+                      ? ui.redoTranscriptionPending
+                      : ui.redoTranscription}
+                  </span>
+                </Button>
+              ) : null}
+            </div>
             {transcript.kind === "text" ? (
               <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
                 {transcript.text}
@@ -137,6 +211,11 @@ export function PdfViewer({
                 {transcript.message}
               </p>
             )}
+            {redoError !== null ? (
+              <p className="text-sm text-danger" role="alert">
+                {redoError}
+              </p>
+            ) : null}
           </aside>
         </div>
       </div>

@@ -13,8 +13,20 @@ export type PageTranscriptInput = {
   pageNumber: number;
   text: string;
   status: PageStatus;
+  imageKey?: string;
   skipReason?: string;
 };
+
+export function canRedoTranscription(
+  page: PageTranscriptInput | undefined,
+): boolean {
+  if (page === undefined || page.imageKey === undefined) return false;
+  return (
+    page.status === "text" ||
+    page.status === "vision" ||
+    page.status === "failed"
+  );
+}
 
 export type PageTranscript =
   | { kind: "text"; text: string }

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { pageIndicator, processing, ui } from "@audit/lib/i18n";
 import {
+  canRedoTranscription,
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
@@ -81,5 +82,36 @@ describe("pageTranscript", () => {
       kind: "status",
       message: processing.pending,
     });
+  });
+});
+
+describe("canRedoTranscription", () => {
+  test("allows a transcribed page that has a stored image", () => {
+    expect(
+      canRedoTranscription(page({ status: "vision", imageKey: "k" })),
+    ).toBe(true);
+    expect(canRedoTranscription(page({ status: "text", imageKey: "k" }))).toBe(
+      true,
+    );
+  });
+
+  test("allows a failed page that has a stored image", () => {
+    expect(
+      canRedoTranscription(page({ status: "failed", imageKey: "k" })),
+    ).toBe(true);
+  });
+
+  test("rejects pages without a stored image", () => {
+    expect(canRedoTranscription(page({ status: "vision" }))).toBe(false);
+    expect(canRedoTranscription(undefined)).toBe(false);
+  });
+
+  test("rejects pending and skipped pages", () => {
+    expect(
+      canRedoTranscription(page({ status: "pending", imageKey: "k" })),
+    ).toBe(false);
+    expect(
+      canRedoTranscription(page({ status: "skipped", imageKey: "k" })),
+    ).toBe(false);
   });
 });

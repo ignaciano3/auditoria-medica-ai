@@ -52,3 +52,54 @@ export async function setFindingReview(
   }
   return result;
 }
+
+export type JobActionResult = { ok: true } | { ok: false; error: string };
+
+export async function redoPageTranscription(
+  documentId: string,
+  pageNumber: number,
+): Promise<JobActionResult> {
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+    return { ok: false, error: errors.redoTranscriptionFailed };
+  }
+  try {
+    const container = getContainer();
+    await container.queue.start();
+    await container.queue.publish({
+      kind: "transcribe-page",
+      documentId,
+      pageNumber,
+    });
+  } catch {
+    return { ok: false, error: errors.redoTranscriptionFailed };
+  }
+  revalidateTag(documentTag(documentId), "max");
+  revalidatePath("/documents/[id]", "page");
+  return { ok: true };
+}
+
+export async function reExtractDocument(
+  documentId: string,
+): Promise<JobActionResult> {
+  try {
+    const container = getContainer();
+    await container.queue.start();
+    await container.queue.publish({ kind: "extract-document", documentId });
+  } catch {
+    return { ok: false, error: errors.reExtractFailed };
+  }
+  revalidateTag(documentTag(documentId), "max");
+  revalidateTag(DOCUMENTS_TAG, "max");
+  revalidatePath("/documents/[id]", "page");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function revalidateDocumentData(
+  documentId: string,
+): Promise<void> {
+  revalidateTag(documentTag(documentId), "max");
+  revalidateTag(DOCUMENTS_TAG, "max");
+  revalidatePath("/documents/[id]", "page");
+  revalidatePath("/");
+}

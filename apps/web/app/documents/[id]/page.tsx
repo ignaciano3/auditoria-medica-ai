@@ -10,6 +10,7 @@ import { DocumentStatusBadge } from "../../../components/document-status-badge.t
 import { FindingsSection } from "../../../components/findings-section.tsx";
 import { ArrowLeftIcon } from "../../../components/icons.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
+import { ReExtractButton } from "../../../components/re-extract-button.tsx";
 import { DetailSkeleton } from "../../../components/skeletons.tsx";
 import { buttonVariants } from "../../../components/ui/button.tsx";
 import { Callout } from "../../../components/ui/callout.tsx";
@@ -87,6 +88,11 @@ async function DocumentContent({
           {doc.originalFilename}
         </h1>
         <DocumentStatusBadge status={doc.status} />
+        <ReExtractButton
+          documentId={doc.id}
+          status={doc.status}
+          updatedAt={doc.updatedAt}
+        />
         <DeleteDocumentButton
           documentId={doc.id}
           fileName={doc.originalFilename}

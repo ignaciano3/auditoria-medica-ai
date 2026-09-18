@@ -16,9 +16,12 @@ export {
 } from "./i18n/es.ts";
 export { InMemoryQueue } from "./queue/in-memory-queue.ts";
 export {
+  type ExtractDocumentJob,
   type JobQueue,
   PROCESS_DOCUMENT_JOB,
   type ProcessDocumentJob,
+  type QueueJob,
+  type TranscribePageJob,
 } from "./queue/job-queue.ts";
 export {
   PgBossQueue,
