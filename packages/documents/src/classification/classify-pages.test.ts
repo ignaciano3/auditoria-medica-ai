@@ -42,4 +42,38 @@ describe("classifyPages", () => {
     expect(result[0]?.docType).toBe("other");
     expect(result[0]?.dataBearing).toBe(true);
   });
+
+  test("reports each classified page through the hooks", async () => {
+    const classified: Array<[number, string]> = [];
+    await classifyPages(
+      [{ pageNumber: 3, png: new Uint8Array([1]) }],
+      stub({}),
+      {
+        onPageClassified: (pageNumber, classification) => {
+          classified.push([pageNumber, classification.docType]);
+        },
+      },
+    );
+    expect(classified).toEqual([[3, "evolution"]]);
+  });
+
+  test("reports classification errors through the hooks", async () => {
+    const failures: Array<[number, string]> = [];
+    const provider: OCRProvider = {
+      classifyPage: async () => {
+        throw new Error("429 no credits");
+      },
+      transcribePage: async () => "",
+    };
+    await classifyPages(
+      [{ pageNumber: 5, png: new Uint8Array([1]) }],
+      provider,
+      {
+        onPageError: (pageNumber, error) => {
+          failures.push([pageNumber, (error as Error).message]);
+        },
+      },
+    );
+    expect(failures).toEqual([[5, "429 no credits"]]);
+  });
 });

@@ -589,4 +589,52 @@ describe("createProcessDocument", () => {
     const pages = deps.saved[0] ?? [];
     expect(pages.map((page) => page.text)).toEqual(["tesseract", "tesseract"]);
   });
+
+  test("logs render and classification phases before transcribing", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const events = deps.infoEvents.map((event) => event.event);
+    expect(events).toContain("document_rendered");
+    expect(events).toContain("classification_started");
+  });
+
+  test("logs every classified page so progress is visible", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const classified = deps.infoEvents.filter(
+      (event) => event.event === "page_classified",
+    );
+    expect(classified.map((event) => event.pageNumber)).toEqual([1, 2]);
+  });
+
+  test("logs classification failures with the error message", async () => {
+    const deps = makeDeps({
+      classifyPage: () => Promise.reject(new Error("429 no credits")),
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const failures = deps.errorEvents.filter(
+      (event) => event.event === "page_classification_failed",
+    );
+    expect(failures.map((event) => event.pageNumber)).toEqual([1, 2]);
+    expect(failures[0]?.message).toBe("429 no credits");
+  });
+
+  test("logs the failure reason when processing fails", async () => {
+    const deps = makeDeps({
+      render: () => Promise.reject(new Error("render boom")),
+    });
+
+    await expect(deps.processDocument({ documentId: "d1" })).rejects.toThrow();
+
+    const failed = deps.errorEvents.find(
+      (event) => event.event === "document_failed",
+    );
+    expect(failed?.message).toBe("render boom");
+  });
 });

@@ -184,8 +184,37 @@ export function createProcessDocument(
       const bytes = await deps.storage.get(document.originalKey);
       const rendered = await render(bytes);
       await deps.documents.setPageCount(documentId, rendered.length);
+      logger.info({
+        event: "document_rendered",
+        documentId,
+        pageCount: rendered.length,
+      });
 
-      const classified = await classifyPages(rendered, deps.ocr);
+      logger.info({
+        event: "classification_started",
+        documentId,
+        pageCount: rendered.length,
+      });
+      const classified = await classifyPages(rendered, deps.ocr, {
+        onPageClassified: (pageNumber, classification) => {
+          logger.info({
+            event: "page_classified",
+            documentId,
+            pageNumber,
+            docType: classification.docType,
+            handwritten: classification.handwritten,
+            dataBearing: classification.dataBearing,
+          });
+        },
+        onPageError: (pageNumber, error) => {
+          logger.error({
+            event: "page_classification_failed",
+            documentId,
+            pageNumber,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        },
+      });
       const processedPages = await processAllPages(
         deps,
         logger,
@@ -198,7 +227,11 @@ export function createProcessDocument(
 
       await runExtraction(deps, documentId, processedPages);
     } catch (error) {
-      logger.error({ event: "document_failed", documentId });
+      logger.error({
+        event: "document_failed",
+        documentId,
+        message: error instanceof Error ? error.message : String(error),
+      });
       const message =
         error instanceof ExtractionFailedError
           ? errors.extractionFailed

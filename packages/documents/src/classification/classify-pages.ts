@@ -1,14 +1,28 @@
 import type { DocumentPage } from "@audit/domain";
-import type { OCRProvider, PageImage } from "../ocr/ocr-provider.ts";
+import type {
+  OCRProvider,
+  PageClassification,
+  PageImage,
+} from "../ocr/ocr-provider.ts";
+
+export type ClassifyPagesHooks = {
+  onPageClassified?(
+    pageNumber: number,
+    classification: PageClassification,
+  ): void;
+  onPageError?(pageNumber: number, error: unknown): void;
+};
 
 export async function classifyPages(
   pages: PageImage[],
   provider: OCRProvider,
+  hooks: ClassifyPagesHooks = {},
 ): Promise<DocumentPage[]> {
   const results: DocumentPage[] = [];
   for (const page of pages) {
     try {
       const classification = await provider.classifyPage(page);
+      hooks.onPageClassified?.(page.pageNumber, classification);
       results.push({
         pageNumber: page.pageNumber,
         text: "",
@@ -17,7 +31,8 @@ export async function classifyPages(
         dataBearing: classification.dataBearing,
         status: "pending",
       });
-    } catch {
+    } catch (error) {
+      hooks.onPageError?.(page.pageNumber, error);
       results.push({
         pageNumber: page.pageNumber,
         text: "",
