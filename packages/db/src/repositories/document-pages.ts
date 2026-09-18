@@ -56,6 +56,15 @@ export function createDocumentPageRepository(db: Database) {
         .orderBy(asc(documentPages.pageNumber));
       return rows.map(toDocumentPage);
     },
+    async listImageKeys(documentId: string): Promise<string[]> {
+      const rows = await db
+        .select({ imageKey: documentPages.imageKey })
+        .from(documentPages)
+        .where(eq(documentPages.documentId, documentId));
+      return rows
+        .map((row) => row.imageKey)
+        .filter((key): key is string => key !== null);
+    },
     async getPage(
       documentId: string,
       pageNumber: number,
