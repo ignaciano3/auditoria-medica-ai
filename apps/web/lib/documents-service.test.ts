@@ -12,6 +12,12 @@ function pdfFile(name = "historia.pdf"): File {
   return new File(["%PDF-1.4"], name, { type: "application/pdf" });
 }
 
+const originalKey = "documents/known/original.pdf";
+const imageKeys = [
+  "documents/known/pages/1.png",
+  "documents/known/pages/2.png",
+];
+
 function makeDeps(): {
   deps: DocumentServiceDeps;
   storage: InMemoryStorage;
@@ -27,10 +33,15 @@ function makeDeps(): {
         return { id: input.id, status: "uploaded" as const };
       },
       async getById() {
-        return { originalKey: "documents/known/original.pdf" };
+        return { originalKey };
       },
       async remove(id) {
         removed.push(id);
+      },
+    },
+    pages: {
+      async listImageKeys() {
+        return imageKeys;
       },
     },
   };
@@ -103,18 +114,50 @@ describe("createUploadedDocument", () => {
 });
 
 describe("deleteDocumentById", () => {
-  test("returns false when the document is missing", async () => {
+  test("reports not found when the document is missing", async () => {
     const { deps } = makeDeps();
     const missing: DocumentServiceDeps = {
       ...deps,
       documents: { ...deps.documents, getById: async () => null },
     };
-    expect(await deleteDocumentById(missing, "nope")).toBe(false);
+    expect(await deleteDocumentById(missing, "nope")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
   });
 
-  test("removes the row and the stored object", async () => {
-    const { deps, removed } = makeDeps();
-    expect(await deleteDocumentById(deps, "known")).toBe(true);
+  test("removes the row, the original and every page image", async () => {
+    const { deps, storage, removed } = makeDeps();
+    await storage.put(originalKey, new Uint8Array([1]), "application/pdf");
+    for (const key of imageKeys) {
+      await storage.put(key, new Uint8Array([2]), "image/png");
+    }
+
+    expect(await deleteDocumentById(deps, "known")).toEqual({ ok: true });
     expect(removed).toEqual(["known"]);
+    await expect(storage.get(originalKey)).rejects.toThrow();
+    for (const key of imageKeys) {
+      await expect(storage.get(key)).rejects.toThrow();
+    }
+  });
+
+  test("keeps the record when deleting objects from storage fails", async () => {
+    const { deps, removed } = makeDeps();
+    const failing: DocumentServiceDeps = {
+      ...deps,
+      storage: {
+        put: async () => {},
+        get: async () => new Uint8Array(),
+        delete: async () => {
+          throw new Error("boom");
+        },
+      } satisfies StorageProvider,
+    };
+
+    expect(await deleteDocumentById(failing, "known")).toEqual({
+      ok: false,
+      reason: "storage",
+    });
+    expect(removed).toHaveLength(0);
   });
 });

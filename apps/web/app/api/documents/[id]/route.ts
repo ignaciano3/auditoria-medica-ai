@@ -39,9 +39,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await params;
-  const removed = await deleteDocumentById(getContainer(), id);
-  if (!removed) {
+  const result = await deleteDocumentById(getContainer(), id);
+  if (!result.ok && result.reason === "not_found") {
     return NextResponse.json({ error: errors.notFound }, { status: 404 });
+  }
+  if (!result.ok) {
+    return NextResponse.json({ error: errors.deleteFailed }, { status: 500 });
   }
   return new Response(null, { status: 204 });
 }

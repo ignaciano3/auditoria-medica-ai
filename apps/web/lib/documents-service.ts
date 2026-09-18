@@ -36,6 +36,9 @@ export type DocumentServiceDeps = {
     getById(id: string): Promise<{ originalKey: string } | null>;
     remove(id: string): Promise<void>;
   };
+  pages: {
+    listImageKeys(documentId: string): Promise<string[]>;
+  };
 };
 
 export type CreateUploadedDocumentResult =
@@ -81,13 +84,26 @@ export async function createUploadedDocument(
   }
 }
 
+export type DeleteDocumentResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "storage" };
+
 export async function deleteDocumentById(
   deps: DocumentServiceDeps,
   id: string,
-): Promise<boolean> {
+): Promise<DeleteDocumentResult> {
   const row = await deps.documents.getById(id);
-  if (!row) return false;
+  if (!row) return { ok: false, reason: "not_found" };
+
+  const imageKeys = await deps.pages.listImageKeys(id);
+  try {
+    await Promise.all(
+      [row.originalKey, ...imageKeys].map((key) => deps.storage.delete(key)),
+    );
+  } catch {
+    return { ok: false, reason: "storage" };
+  }
+
   await deps.documents.remove(id);
-  await deps.storage.delete(row.originalKey).catch(() => undefined);
-  return true;
+  return { ok: true };
 }

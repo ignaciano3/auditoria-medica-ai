@@ -30,12 +30,14 @@ export async function uploadDocument(
 }
 
 export async function deleteDocument(id: string): Promise<void> {
-  const removed = await deleteDocumentById(getContainer(), id);
-  if (removed) {
-    revalidateTag(DOCUMENTS_TAG, "max");
-    revalidateTag(documentTag(id), "max");
-    revalidatePath("/");
+  const result = await deleteDocumentById(getContainer(), id);
+  if (!result.ok) {
+    if (result.reason === "storage") throw new Error(errors.deleteFailed);
+    return;
   }
+  revalidateTag(DOCUMENTS_TAG, "max");
+  revalidateTag(documentTag(id), "max");
+  revalidatePath("/");
 }
 
 export type FindingReviewActionResult =
