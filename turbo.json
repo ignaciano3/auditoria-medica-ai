@@ -22,6 +22,11 @@
       "persistent": true,
       "envMode": "loose"
     },
+    "db:studio": {
+      "cache": false,
+      "persistent": true,
+      "envMode": "loose"
+    },
     "//#lint:fix": {
       "cache": false
     }
