@@ -1,17 +1,10 @@
-import { HeuristicLLMProvider, OpenAIProvider } from "@audit/ai";
 import {
   createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
   getDb,
 } from "@audit/db";
-import {
-  LocalPageClassifier,
-  type OCRProvider,
-  OpenAIVisionOCRProvider,
-  renderPdfPages,
-  TesseractOCRProvider,
-} from "@audit/documents";
+import { renderPdfPages } from "@audit/documents";
 import { getEnv, PgBossQueue, S3Storage } from "@audit/lib";
 import { createExtractDocument } from "./pipeline/extract-document.ts";
 import {
@@ -19,43 +12,7 @@ import {
   type ProcessingLogger,
 } from "./pipeline/process-document.ts";
 import { createTranscribePage } from "./pipeline/transcribe-page.ts";
-
-function createOcrProvider(env: ReturnType<typeof getEnv>): {
-  ocr: OCRProvider;
-  handwrittenOcr?: OCRProvider;
-} {
-  switch (env.OCR_PROVIDER) {
-    case "local":
-      return {
-        ocr: new TesseractOCRProvider({
-          classifier: new LocalPageClassifier(),
-        }),
-      };
-    case "tesseract": {
-      const vision = new OpenAIVisionOCRProvider({
-        apiKey: env.OPENAI_API_KEY,
-        model: env.OCR_MODEL,
-        classifyDetail: "high",
-        transcribeDetail: "high",
-        reasoningEffort: "low",
-      });
-      return {
-        ocr: new TesseractOCRProvider({ classifier: vision }),
-        handwrittenOcr: vision,
-      };
-    }
-    default:
-      return {
-        ocr: new OpenAIVisionOCRProvider({
-          apiKey: env.OPENAI_API_KEY,
-          model: env.OCR_MODEL,
-          classifyDetail: "high",
-          transcribeDetail: "high",
-          reasoningEffort: "low",
-        }),
-      };
-  }
-}
+import { createLlmProvider, createOcrProviders } from "./providers.ts";
 
 const logger: ProcessingLogger = {
   info: (event) => {
@@ -69,21 +26,14 @@ const logger: ProcessingLogger = {
 async function main(): Promise<void> {
   const env = getEnv();
   const db = getDb(env.DATABASE_URL);
-  const { ocr, handwrittenOcr } = createOcrProvider(env);
+  const { ocr, handwrittenOcr } = createOcrProviders(env);
   const storage = new S3Storage({
     endpoint: env.S3_ENDPOINT,
     bucket: env.S3_BUCKET,
     accessKey: env.S3_ACCESS_KEY,
     secretKey: env.S3_SECRET_KEY,
   });
-  const provider =
-    env.LLM_PROVIDER === "heuristic"
-      ? new HeuristicLLMProvider()
-      : new OpenAIProvider({
-          apiKey: env.OPENAI_API_KEY,
-          model: env.LLM_MODEL,
-          reasoningEffort: "low",
-        });
+  const provider = createLlmProvider(env);
 
   const documents = createDocumentRepository(db);
   const pages = createDocumentPageRepository(db);

@@ -169,4 +169,32 @@ describe("OpenAIVisionOCRProvider", () => {
     });
     expect(result).toBe("texto de prueba");
   });
+
+  test("merges extraBody into the request", async () => {
+    const { client, requests } = capturingClient(
+      JSON.stringify({ docType: "lab", handwritten: false, dataBearing: true }),
+    );
+    const provider = new OpenAIVisionOCRProvider({
+      apiKey: "test",
+      model: "qwen3.8-flash",
+      client,
+      extraBody: { enable_thinking: false },
+    });
+    await provider.classifyPage({ pageNumber: 1, png: new Uint8Array([1, 2]) });
+    expect(requests[0]?.enable_thinking).toBe(false);
+  });
+
+  test("omits reasoning effort when set to null", async () => {
+    const { client, requests } = capturingClient(
+      JSON.stringify({ docType: "lab", handwritten: false, dataBearing: true }),
+    );
+    const provider = new OpenAIVisionOCRProvider({
+      apiKey: "test",
+      model: "qwen3.8-flash",
+      client,
+      reasoningEffort: null,
+    });
+    await provider.classifyPage({ pageNumber: 1, png: new Uint8Array([1, 2]) });
+    expect(Object.hasOwn(requests[0] ?? {}, "reasoning_effort")).toBe(false);
+  });
 });

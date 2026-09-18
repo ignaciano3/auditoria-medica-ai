@@ -100,3 +100,99 @@ describe("parseEnv", () => {
     expect(() => parseEnv({})).toThrow();
   });
 });
+
+describe("parseEnv provider selection", () => {
+  const LOCAL = {
+    ...BASE,
+    OCR_PROVIDER: "local",
+    OCR_MODEL: "gpt-5.6-luna",
+  } as const;
+
+  test("accepts the deepseek LLM provider with its own key", () => {
+    const result = parseEnv({
+      ...LOCAL,
+      LLM_PROVIDER: "deepseek",
+      LLM_MODEL: "deepseek-flash",
+      DEEPSEEK_API_KEY: "ds-test",
+    });
+    expect(result.LLM_PROVIDER).toBe("deepseek");
+  });
+
+  test("accepts the qwen LLM provider with its own key", () => {
+    const result = parseEnv({
+      ...LOCAL,
+      LLM_PROVIDER: "qwen",
+      LLM_MODEL: "qwen3.8-flash",
+      DASHSCOPE_API_KEY: "ds-test",
+    });
+    expect(result.LLM_PROVIDER).toBe("qwen");
+  });
+
+  test("rejects a deepseek provider without a DeepSeek key", () => {
+    expect(() =>
+      parseEnv({
+        ...LOCAL,
+        LLM_PROVIDER: "deepseek",
+        LLM_MODEL: "deepseek-flash",
+      }),
+    ).toThrow();
+  });
+
+  test("rejects a qwen provider without a DashScope key", () => {
+    expect(() =>
+      parseEnv({
+        ...LOCAL,
+        LLM_PROVIDER: "qwen",
+        LLM_MODEL: "qwen3.8-flash",
+      }),
+    ).toThrow();
+  });
+
+  test("accepts a qwen OCR provider with its own key", () => {
+    const result = parseEnv({
+      ...BASE,
+      LLM_PROVIDER: "heuristic",
+      LLM_MODEL: "gpt-5.6-terra",
+      OCR_PROVIDER: "qwen",
+      OCR_MODEL: "qwen3.8-flash",
+      DASHSCOPE_API_KEY: "ds-test",
+    });
+    expect(result.OCR_PROVIDER).toBe("qwen");
+  });
+
+  test("rejects a qwen OCR provider without a DashScope key", () => {
+    expect(() =>
+      parseEnv({
+        ...BASE,
+        LLM_PROVIDER: "heuristic",
+        LLM_MODEL: "gpt-5.6-terra",
+        OCR_PROVIDER: "qwen",
+        OCR_MODEL: "qwen3.8-flash",
+      }),
+    ).toThrow();
+  });
+
+  test("rejects a model that does not belong to the selected LLM provider", () => {
+    expect(() =>
+      parseEnv({
+        ...LOCAL,
+        LLM_PROVIDER: "qwen",
+        LLM_MODEL: "deepseek-flash",
+        DASHSCOPE_API_KEY: "ds-test",
+      }),
+    ).toThrow();
+  });
+
+  test("rejects a model that does not belong to the selected OCR provider", () => {
+    expect(() =>
+      parseEnv({
+        ...BASE,
+        LLM_PROVIDER: "heuristic",
+        LLM_MODEL: "gpt-5.6-terra",
+        OCR_PROVIDER: "qwen",
+        OCR_MODEL: "gpt-5.6-luna",
+        DASHSCOPE_API_KEY: "ds-test",
+      }),
+    ).toThrow();
+  });
+});

@@ -69,9 +69,11 @@ function parseClassification(content: string | null): PageClassification {
 export class OpenAIVisionOCRProvider implements OCRProvider {
   private readonly model: string;
   private readonly apiKey: string;
+  private readonly baseURL: string | undefined;
+  private readonly extraBody: Record<string, unknown> | undefined;
   private readonly classifyDetail: ImageDetail;
   private readonly transcribeDetail: ImageDetail;
-  private readonly reasoningEffort: string;
+  private readonly reasoningEffort: string | null;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -79,16 +81,21 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
     apiKey: string;
     model: string;
     client?: OpenAICompatibleClient;
+    baseURL?: string;
+    extraBody?: Record<string, unknown>;
     classifyDetail?: ImageDetail;
     transcribeDetail?: ImageDetail;
-    reasoningEffort?: string;
+    reasoningEffort?: string | null;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
+    this.baseURL = options.baseURL;
+    this.extraBody = options.extraBody;
     this.injectedClient = options.client;
     this.classifyDetail = options.classifyDetail ?? "low";
     this.transcribeDetail = options.transcribeDetail ?? "high";
-    this.reasoningEffort = options.reasoningEffort ?? "low";
+    this.reasoningEffort =
+      options.reasoningEffort === undefined ? "low" : options.reasoningEffort;
   }
 
   private get client(): OpenAICompatibleClient {
@@ -97,63 +104,75 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
         this.injectedClient ??
         (new OpenAI({
           apiKey: this.apiKey,
+          ...(this.baseURL ? { baseURL: this.baseURL } : {}),
         }) as unknown as OpenAICompatibleClient);
     }
     return this.cachedClient;
   }
 
+  private buildRequest(body: Record<string, unknown>): Record<string, unknown> {
+    const request: Record<string, unknown> = { model: this.model, ...body };
+    if (this.reasoningEffort !== null) {
+      request.reasoning_effort = this.reasoningEffort;
+    }
+    if (this.extraBody) {
+      Object.assign(request, this.extraBody);
+    }
+    return request;
+  }
+
   async classifyPage(input: PageImage): Promise<PageClassification> {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      reasoning_effort: this.reasoningEffort,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: CLASSIFY_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Classify this page." },
-            {
-              type: "image_url",
-              image_url: {
-                url: toDataUrl(input.png),
-                detail: this.classifyDetail,
+    const response = await this.client.chat.completions.create(
+      this.buildRequest({
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: CLASSIFY_SYSTEM_PROMPT,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Classify this page." },
+              {
+                type: "image_url",
+                image_url: {
+                  url: toDataUrl(input.png),
+                  detail: this.classifyDetail,
+                },
               },
-            },
-          ],
-        },
-      ],
-    });
+            ],
+          },
+        ],
+      }),
+    );
     return parseClassification(response.choices[0]?.message.content ?? null);
   }
 
   async transcribePage(input: PageImage): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      reasoning_effort: this.reasoningEffort,
-      messages: [
-        {
-          role: "system",
-          content: TRANSCRIBE_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Transcribe this page." },
-            {
-              type: "image_url",
-              image_url: {
-                url: toDataUrl(input.png),
-                detail: this.transcribeDetail,
+    const response = await this.client.chat.completions.create(
+      this.buildRequest({
+        messages: [
+          {
+            role: "system",
+            content: TRANSCRIBE_SYSTEM_PROMPT,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe this page." },
+              {
+                type: "image_url",
+                image_url: {
+                  url: toDataUrl(input.png),
+                  detail: this.transcribeDetail,
+                },
               },
-            },
-          ],
-        },
-      ],
-    });
+            ],
+          },
+        ],
+      }),
+    );
     return response.choices[0]?.message.content ?? "";
   }
 }

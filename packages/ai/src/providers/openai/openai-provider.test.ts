@@ -97,6 +97,34 @@ describe("OpenAIProvider.extractClinicalRecord", () => {
   });
 });
 
+describe("OpenAIProvider request configuration", () => {
+  test("merges extraBody into the request", async () => {
+    const fake = sequencedClient([JSON.stringify(validRecord)]);
+    const configured = new OpenAIProvider({
+      apiKey: "t",
+      model: "deepseek-flash",
+      client: fake.client,
+      extraBody: { thinking: { type: "disabled" } },
+    });
+    await configured.extractClinicalRecord([page]);
+    expect(fake.requests[0]?.thinking).toEqual({ type: "disabled" });
+  });
+
+  test("omits reasoning effort when set to null", async () => {
+    const fake = sequencedClient([JSON.stringify(validRecord)]);
+    const configured = new OpenAIProvider({
+      apiKey: "t",
+      model: "qwen3.8-flash",
+      client: fake.client,
+      reasoningEffort: null,
+    });
+    await configured.extractClinicalRecord([page]);
+    expect(Object.hasOwn(fake.requests[0] ?? {}, "reasoning_effort")).toBe(
+      false,
+    );
+  });
+});
+
 describe("OpenAIProvider.analyzeClinicalRecord", () => {
   const record = validRecord as Parameters<
     OpenAIProvider["analyzeClinicalRecord"]
