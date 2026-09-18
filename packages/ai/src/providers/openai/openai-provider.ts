@@ -86,7 +86,9 @@ function parseFindings(content: string | null): Finding[] | undefined {
 export class OpenAIProvider implements LLMProvider {
   private readonly model: string;
   private readonly apiKey: string;
-  private readonly reasoningEffort: string;
+  private readonly baseURL: string | undefined;
+  private readonly extraBody: Record<string, unknown> | undefined;
+  private readonly reasoningEffort: string | null;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -94,12 +96,17 @@ export class OpenAIProvider implements LLMProvider {
     apiKey: string;
     model: string;
     client?: OpenAICompatibleClient;
-    reasoningEffort?: string;
+    baseURL?: string;
+    extraBody?: Record<string, unknown>;
+    reasoningEffort?: string | null;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
+    this.baseURL = options.baseURL;
+    this.extraBody = options.extraBody;
     this.injectedClient = options.client;
-    this.reasoningEffort = options.reasoningEffort ?? "low";
+    this.reasoningEffort =
+      options.reasoningEffort === undefined ? "low" : options.reasoningEffort;
   }
 
   private get client(): OpenAICompatibleClient {
@@ -108,6 +115,7 @@ export class OpenAIProvider implements LLMProvider {
         this.injectedClient ??
         (new OpenAI({
           apiKey: this.apiKey,
+          ...(this.baseURL ? { baseURL: this.baseURL } : {}),
         }) as unknown as OpenAICompatibleClient);
     }
     return this.cachedClient;
@@ -131,11 +139,16 @@ export class OpenAIProvider implements LLMProvider {
     }
     const request: Record<string, unknown> = {
       model: this.model,
-      reasoning_effort: this.reasoningEffort,
       messages,
     };
+    if (this.reasoningEffort !== null) {
+      request.reasoning_effort = this.reasoningEffort;
+    }
     if (jsonObject) {
       request.response_format = { type: "json_object" };
+    }
+    if (this.extraBody) {
+      Object.assign(request, this.extraBody);
     }
     const response = await this.client.chat.completions.create(request);
     return response.choices[0]?.message.content ?? null;
