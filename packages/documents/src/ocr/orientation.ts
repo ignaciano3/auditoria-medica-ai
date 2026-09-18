@@ -1,18 +1,69 @@
 import * as mupdf from "mupdf";
+import { OCR_LANGUAGE } from "./ocr-provider.ts";
 import type { TesseractRecognize } from "./tesseract-ocr-provider.ts";
 
 export type Orientation = 0 | 90 | 180 | 270;
 
 export const ORIENTATIONS: readonly Orientation[] = [0, 90, 180, 270];
 
-export const DEFAULT_OSD_MIN_CONFIDENCE = 1;
-
-export type OsdReading = { orientation: Orientation; confidence: number };
+export type OsdReading = {
+  orientation: Orientation;
+  confidence: number;
+  scriptConfidence: number;
+};
 
 export type RotationDeps = {
   rotate?: (png: Uint8Array, degrees: Orientation) => Uint8Array;
-  minConfidence?: number;
 };
+
+const SPANISH_HINTS = new Set([
+  "de",
+  "del",
+  "la",
+  "el",
+  "los",
+  "las",
+  "y",
+  "en",
+  "con",
+  "por",
+  "para",
+  "fecha",
+  "hora",
+  "paciente",
+  "nombre",
+  "apellido",
+  "edad",
+  "cama",
+  "ingreso",
+  "internacion",
+  "internación",
+  "evolucion",
+  "evolución",
+  "enfermeria",
+  "enfermería",
+  "clinica",
+  "clínica",
+  "medicamentos",
+  "administracion",
+  "administración",
+  "indicaciones",
+  "cuidados",
+  "intensivos",
+  "signos",
+  "vitales",
+  "control",
+  "alergia",
+  "diagnostico",
+  "diagnóstico",
+  "tratamiento",
+  "laboratorio",
+  "providencia",
+  "sello",
+  "matricula",
+  "matrícula",
+  "turno",
+]);
 
 export function parseOsd(output: string): OsdReading | null {
   const rotate = output.match(/Rotate:\s*(\d+)/i);
@@ -27,10 +78,35 @@ export function parseOsd(output: string): OsdReading | null {
     return null;
   }
   const confidence = output.match(/Orientation confidence:\s*([\d.]+)/i);
+  const scriptConfidence = output.match(/Script confidence:\s*([\d.]+)/i);
   return {
     orientation: degrees as Orientation,
     confidence: confidence ? Number(confidence[1]) : 0,
+    scriptConfidence: scriptConfidence ? Number(scriptConfidence[1]) : 0,
   };
+}
+
+export function scoreText(text: string): number {
+  const normalized = text.toLowerCase();
+  const letters = normalized.match(/[a-záéíóúüñ]/g)?.length ?? 0;
+  const tokens = normalized.match(/[a-záéíóúüñ]+/g) ?? [];
+  let hints = 0;
+  for (const token of tokens) {
+    if (SPANISH_HINTS.has(token)) hints += 1;
+  }
+  return hints * 1000 + letters;
+}
+
+async function scoreOrientation(
+  png: Uint8Array,
+  recognize: TesseractRecognize,
+): Promise<number> {
+  try {
+    const text = await recognize(png, { psm: 6, lang: OCR_LANGUAGE });
+    return scoreText(text);
+  } catch {
+    return -1;
+  }
 }
 
 function pngWidth(png: Uint8Array): number {
@@ -98,24 +174,24 @@ export async function detectOrientation(
   deps: RotationDeps = {},
 ): Promise<Orientation> {
   const rotate = deps.rotate ?? rotatePng;
-  const minConfidence = deps.minConfidence ?? DEFAULT_OSD_MIN_CONFIDENCE;
 
   const osd = await readOsd(png, recognize);
-  if (osd && osd.confidence >= minConfidence) return osd.orientation;
 
-  let best: { degrees: Orientation; confidence: number } | null = null;
-  for (const degrees of ORIENTATIONS) {
-    const candidate =
-      degrees === 0
-        ? osd
-        : await (async () => {
-            const rotated = safeRotate(png, degrees, rotate);
-            return rotated ? readOsd(rotated, recognize) : null;
-          })();
-    if (candidate && candidate.orientation === 0) {
-      if (!best || candidate.confidence > best.confidence) {
-        best = { degrees, confidence: candidate.confidence };
-      }
+  // Tesseract OSD is unreliable on handwritten tables: it often reports the
+  // wrong script with high confidence and an orientation that is 180 degrees
+  // off. Always compare the OSD candidate with its half-turn opposite by how
+  // much real Spanish text each produces, and keep the best.
+  const candidates: Orientation[] = osd
+    ? [osd.orientation, ((osd.orientation + 180) % 360) as Orientation]
+    : [...ORIENTATIONS];
+
+  let best: { degrees: Orientation; score: number } | null = null;
+  for (const degrees of candidates) {
+    const image = degrees === 0 ? png : safeRotate(png, degrees, rotate);
+    if (image === null) continue;
+    const score = await scoreOrientation(image, recognize);
+    if (best === null || score > best.score) {
+      best = { degrees, score };
     }
   }
 

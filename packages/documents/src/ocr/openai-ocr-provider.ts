@@ -35,6 +35,20 @@ const FALLBACK_CLASSIFICATION: PageClassification = {
   dataBearing: true,
 };
 
+const CLASSIFY_SYSTEM_PROMPT =
+  "You classify pages of Spanish clinical documents. Always assume the " +
+  "document language is Spanish. Reply with JSON containing docType, " +
+  "handwritten and dataBearing. Set handwritten=true when the page contains " +
+  "significant handwriting: handwritten clinical notes, or forms and charts " +
+  "filled in by hand such as vital signs, medication administration and " +
+  "nursing records, even if the page also has printed headers. Set " +
+  "handwritten=false only for fully printed pages.";
+
+const TRANSCRIBE_SYSTEM_PROMPT =
+  "Transcribe faithfully the text of this Spanish clinical document. Always " +
+  "transcribe in Spanish. Do not interpret or add information. Ignore " +
+  "signatures and stamps.";
+
 function toDataUrl(png: Uint8Array): string {
   return `data:image/png;base64,${Buffer.from(png).toString("base64")}`;
 }
@@ -96,8 +110,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
       messages: [
         {
           role: "system",
-          content:
-            "You classify clinical document pages in Spanish. Reply with JSON containing docType, handwritten and dataBearing.",
+          content: CLASSIFY_SYSTEM_PROMPT,
         },
         {
           role: "user",
@@ -124,8 +137,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
       messages: [
         {
           role: "system",
-          content:
-            "Transcribe faithfully the text of the Spanish clinical document. Do not interpret or add information. Ignore signatures and stamps.",
+          content: TRANSCRIBE_SYSTEM_PROMPT,
         },
         {
           role: "user",

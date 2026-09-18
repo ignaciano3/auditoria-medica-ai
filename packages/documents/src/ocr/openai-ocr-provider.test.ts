@@ -35,6 +35,15 @@ function imageDetail(request: CapturedRequest): unknown {
   return image.image_url.detail;
 }
 
+function systemPrompt(request: CapturedRequest): string {
+  const messages = request.messages as Array<{
+    role: string;
+    content: unknown;
+  }>;
+  const system = messages.find((message) => message.role === "system");
+  return String(system?.content ?? "");
+}
+
 describe("OpenAIVisionOCRProvider", () => {
   test("parses a classification response", async () => {
     const { client } = capturingClient(
@@ -70,6 +79,25 @@ describe("OpenAIVisionOCRProvider", () => {
     await provider.classifyPage({ pageNumber: 1, png: new Uint8Array([1, 2]) });
     expect(requests[0]?.reasoning_effort).toBe("low");
     expect(imageDetail(requests[0] ?? {})).toBe("low");
+  });
+
+  test("guides the classifier to detect handwriting and assume Spanish", async () => {
+    const { client, requests } = capturingClient(
+      JSON.stringify({
+        docType: "other",
+        handwritten: true,
+        dataBearing: true,
+      }),
+    );
+    const provider = new OpenAIVisionOCRProvider({
+      apiKey: "test",
+      model: "gpt-5.6-luna",
+      client,
+    });
+    await provider.classifyPage({ pageNumber: 1, png: new Uint8Array([1, 2]) });
+    const prompt = systemPrompt(requests[0] ?? {});
+    expect(prompt).toContain("handwriting");
+    expect(prompt).toContain("Spanish");
   });
 
   test("transcribes with high image detail", async () => {

@@ -35,7 +35,7 @@ function createOcrProvider(env: ReturnType<typeof getEnv>): {
       const vision = new OpenAIVisionOCRProvider({
         apiKey: env.OPENAI_API_KEY,
         model: env.OCR_MODEL,
-        classifyDetail: "low",
+        classifyDetail: "high",
         transcribeDetail: "high",
         reasoningEffort: "low",
       });
@@ -49,7 +49,7 @@ function createOcrProvider(env: ReturnType<typeof getEnv>): {
         ocr: new OpenAIVisionOCRProvider({
           apiKey: env.OPENAI_API_KEY,
           model: env.OCR_MODEL,
-          classifyDetail: "low",
+          classifyDetail: "high",
           transcribeDetail: "high",
           reasoningEffort: "low",
         }),

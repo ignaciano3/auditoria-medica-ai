@@ -1,5 +1,7 @@
 import type { PageDocType } from "@audit/domain";
 
+export const OCR_LANGUAGE = "spa";
+
 export type PageImage = { pageNumber: number; png: Uint8Array };
 
 export type PageClassification = {

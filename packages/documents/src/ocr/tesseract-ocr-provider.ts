@@ -4,6 +4,7 @@ import type {
   PageClassifier,
   PageImage,
 } from "./ocr-provider.ts";
+import { OCR_LANGUAGE } from "./ocr-provider.ts";
 import { orientPng } from "./orientation.ts";
 
 export type TesseractRecognize = (
@@ -12,7 +13,7 @@ export type TesseractRecognize = (
 ) => Promise<string>;
 
 export const DEFAULT_TESSERACT_OPTIONS = {
-  lang: "spa",
+  lang: OCR_LANGUAGE,
   psm: 1,
 } as const;
 

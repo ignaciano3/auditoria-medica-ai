@@ -5,6 +5,7 @@ import {
   orientPng,
   parseOsd,
   rotatePng,
+  scoreText,
 } from "./orientation.ts";
 import type { TesseractRecognize } from "./tesseract-ocr-provider.ts";
 
@@ -34,17 +35,18 @@ Script: Latin
 Script confidence: 1.48`;
 
 describe("parseOsd", () => {
-  test("reads the rotation needed to correct the page", () => {
+  test("reads the rotation and script confidence", () => {
     expect(parseOsd(OSD_OUTPUT)).toEqual({
       orientation: 270,
       confidence: 3.49,
+      scriptConfidence: 1.48,
     });
   });
 
   test("derives the rotation when Rotate is absent", () => {
     expect(
       parseOsd("Orientation in degrees: 90\nOrientation confidence: 2"),
-    ).toEqual({ orientation: 270, confidence: 2 });
+    ).toEqual({ orientation: 270, confidence: 2, scriptConfidence: 0 });
   });
 
   test("returns null when no orientation is reported", () => {
@@ -54,51 +56,76 @@ describe("parseOsd", () => {
   });
 });
 
+describe("scoreText", () => {
+  test("prefers Spanish clinical text over gibberish", () => {
+    expect(
+      scoreText("Paciente: evolución clínica, fecha de ingreso"),
+    ).toBeGreaterThan(scoreText("vnnoieivin jotias aay qwrt"));
+  });
+});
+
 describe("detectOrientation", () => {
-  test("trusts a confident OSD reading without probing rotations", async () => {
-    const rotations: number[] = [];
+  test("picks the OSD candidate when it scores best", async () => {
+    const osd =
+      "Rotate: 180\nOrientation confidence: 2.5\nScript: Latin\nScript confidence: 1.2";
+    const recognize: TesseractRecognize = async (image, options) => {
+      if (options?.psm === 0) return osd;
+      const degrees = (image as Uint8Array)[0] ?? 0;
+      return degrees === 180
+        ? "paciente evolución clínica fecha de ingreso"
+        : "vnnoieivin jotias aay qwrt";
+    };
+
     const result = await detectOrientation(
       new Uint8Array([7, 7, 7]),
-      async () => "Rotate: 180\nOrientation confidence: 2.5",
-      {
-        rotate: (_png, degrees) => {
-          rotations.push(degrees);
-          return new Uint8Array([degrees]);
-        },
-      },
+      recognize,
+      { rotate: (_png, degrees) => new Uint8Array([degrees]) },
     );
 
     expect(result).toBe(180);
-    expect(rotations).toEqual([]);
   });
 
-  test("probes rotations and picks the one that needs no correction", async () => {
-    const confidenceByRotation: Record<number, number> = {
-      90: 1,
-      180: 5,
-      270: 2,
-    };
-    const recognize: TesseractRecognize = async (image) => {
-      const bytes = image as Uint8Array;
-      if (bytes.length === 1) {
-        const degrees = bytes[0] ?? 0;
-        return `Orientation in degrees: 0\nRotate: 0\nOrientation confidence: ${confidenceByRotation[degrees] ?? 0}`;
+  test("corrects a confident OSD that is 180 degrees off using the text score", async () => {
+    const osd =
+      "Orientation in degrees: 90\nRotate: 270\nOrientation confidence: 2.61\nScript: Korean\nScript confidence: 0.11";
+    const recognize: TesseractRecognize = async (image, options) => {
+      if (options?.psm === 0) return osd;
+      const degrees = (image as Uint8Array)[0] ?? 0;
+      if (degrees === 90) {
+        return "Paciente: evolución clínica, fecha de ingreso, enfermería";
       }
-      return "Orientation in degrees: 90\nRotate: 90\nOrientation confidence: 0.5";
+      return "vnnoieivin jotias aay qwrt";
     };
 
     const result = await detectOrientation(
       new Uint8Array([1, 2, 3]),
       recognize,
-      {
-        rotate: (_png, degrees) => new Uint8Array([degrees]),
-      },
+      { rotate: (_png, degrees) => new Uint8Array([degrees]) },
+    );
+
+    expect(result).toBe(90);
+  });
+
+  test("scores every rotation when OSD is unavailable", async () => {
+    const recognize: TesseractRecognize = async (image, options) => {
+      if (options?.psm === 0) return "not osd output";
+      const degrees = (image as Uint8Array)[0] ?? 0;
+      if (degrees === 180) {
+        return "Paciente: fecha de ingreso, cuidados intensivos";
+      }
+      return "vnnoieivin jotias";
+    };
+
+    const result = await detectOrientation(
+      new Uint8Array([1, 2, 3]),
+      recognize,
+      { rotate: (_png, degrees) => new Uint8Array([degrees]) },
     );
 
     expect(result).toBe(180);
   });
 
-  test("keeps the OSD reading when no rotation reads upright", async () => {
+  test("keeps the OSD reading when no rotation reads better", async () => {
     const result = await detectOrientation(
       new Uint8Array([1, 2, 3]),
       async () => "Rotate: 90\nOrientation confidence: 0.5",
@@ -141,11 +168,19 @@ describe("rotatePng", () => {
 
 describe("orientPng", () => {
   test("returns the image rotated by the detected orientation", async () => {
-    const result = await orientPng(
-      new Uint8Array([1, 2, 3]),
-      async () => "Rotate: 90\nOrientation confidence: 3",
-      { rotate: (_png, degrees) => new Uint8Array([degrees]) },
-    );
+    const osd =
+      "Rotate: 90\nOrientation confidence: 3\nScript: Latin\nScript confidence: 1";
+    const recognize: TesseractRecognize = async (image, options) => {
+      if (options?.psm === 0) return osd;
+      const degrees = (image as Uint8Array)[0] ?? 0;
+      return degrees === 90
+        ? "paciente evolución clínica"
+        : "vnnoieivin jotias";
+    };
+
+    const result = await orientPng(new Uint8Array([1, 2, 3]), recognize, {
+      rotate: (_png, degrees) => new Uint8Array([degrees]),
+    });
 
     expect(Array.from(result)).toEqual([90]);
   });
