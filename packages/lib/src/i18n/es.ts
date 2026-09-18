@@ -188,6 +188,10 @@ export const ui = {
   dismissFinding: "Descartar hallazgo",
   askRecord: "Preguntarle a la historia clínica",
   incompleteAnalysis: "Análisis incompleto",
+  theme: "Tema",
+  themeLight: "Claro",
+  themeDark: "Oscuro",
+  themeSystem: "Sistema",
   deleteDocument: "Eliminar",
   deleting: "Eliminando…",
 } as const;
