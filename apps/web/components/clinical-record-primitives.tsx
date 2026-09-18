@@ -7,6 +7,7 @@ import {
   sourcePages,
 } from "../lib/clinical-record-view.ts";
 import { EvidenceLinks } from "./evidence-link.tsx";
+import { Section } from "./ui/section.tsx";
 
 export type RecordFieldSpec = {
   label: string;
@@ -19,7 +20,7 @@ export function RecordValue({ value }: { value: string | number | undefined }) {
   if (text === undefined) return null;
   if (isPlaceholderValue(text)) {
     return (
-      <span className="font-semibold text-[#9a6700]">
+      <span className="font-semibold text-warning">
         {clinicalRecord.invalidValue}
       </span>
     );
@@ -39,16 +40,9 @@ export function CollapsibleSection({
   children: ReactNode;
 }) {
   return (
-    <details
-      className="rounded-lg border border-foreground/20 p-4"
-      open={defaultOpen}
-    >
-      <summary className="cursor-pointer text-base font-semibold">
-        {title}
-        {count !== undefined ? ` (${count})` : ""}
-      </summary>
-      <div className="mt-3 flex flex-col gap-3">{children}</div>
-    </details>
+    <Section title={title} count={count} defaultOpen={defaultOpen}>
+      <div className="flex flex-col gap-3">{children}</div>
+    </Section>
   );
 }
 
@@ -70,7 +64,7 @@ export function RecordField({
 
   return (
     <>
-      <dt className="font-semibold text-foreground/70">{label}</dt>
+      <dt className="font-semibold text-muted-foreground">{label}</dt>
       <dd className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]">
         <RecordValue value={value} />
         {showEvidence ? (
@@ -124,7 +118,7 @@ export function RecordItem({
   pages: number[];
 }) {
   return (
-    <li className="flex flex-col gap-2 rounded-md border border-foreground/15 p-3">
+    <li className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
       {title !== undefined ? (
         <p className="font-semibold [overflow-wrap:anywhere]">{title}</p>
       ) : null}
@@ -139,5 +133,7 @@ export function RecordItem({
 }
 
 export function RecordEmpty() {
-  return <p className="text-sm text-foreground/60">{clinicalRecord.noInfo}</p>;
+  return (
+    <p className="text-sm text-muted-foreground">{clinicalRecord.noInfo}</p>
+  );
 }

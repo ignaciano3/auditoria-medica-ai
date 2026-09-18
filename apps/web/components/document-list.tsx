@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DeleteDocumentButton } from "./delete-document-button.tsx";
 import { pollIntervalMs } from "./document-status.ts";
 import { DocumentStatusBadge } from "./document-status-badge.tsx";
+import { FileTextIcon } from "./icons.tsx";
+import { Callout } from "./ui/callout.tsx";
+import { EmptyState } from "./ui/empty-state.tsx";
 
 type DocumentsState =
   | { kind: "loaded"; documents: Document[] }
@@ -73,30 +76,35 @@ export function DocumentList({
 
   if (state.kind === "error") {
     return (
-      <p className="text-[#d1242f]" role="alert">
-        {ui.loadError}
-      </p>
+      <Callout tone="danger" role="alert">
+        <p>{ui.loadError}</p>
+      </Callout>
     );
   }
   if (documents.length === 0) {
-    return <p className="text-foreground/60">{ui.noDocuments}</p>;
+    return (
+      <EmptyState icon={<FileTextIcon className="size-6" />}>
+        {ui.noDocuments}
+      </EmptyState>
+    );
   }
   return (
     <ul className="flex list-none flex-col gap-2">
       {documents.map((doc) => (
         <li
           key={doc.id}
-          className="flex items-center gap-3 rounded-lg border border-foreground/15 px-4 py-3"
+          className="group flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-xs transition-colors hover:border-brand/40"
         >
+          <FileTextIcon className="size-5 shrink-0 text-muted-foreground" />
           <Link
-            className="flex-1 [overflow-wrap:anywhere]"
+            className="flex-1 font-medium [overflow-wrap:anywhere] transition-colors group-hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             href={`/documents/${doc.id}`}
           >
             {doc.originalFilename}
           </Link>
           <DocumentStatusBadge status={doc.status} />
           {doc.status === "ready" && doc.pageCount !== null ? (
-            <span className="text-foreground/60">
+            <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">
               {doc.pageCount} {ui.pages}
             </span>
           ) : null}

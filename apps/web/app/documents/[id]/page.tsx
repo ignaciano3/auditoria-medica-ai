@@ -7,7 +7,10 @@ import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx
 import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
 import { FindingsSection } from "../../../components/findings-section.tsx";
+import { ArrowLeftIcon } from "../../../components/icons.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
+import { buttonVariants } from "../../../components/ui/button.tsx";
+import { Callout } from "../../../components/ui/callout.tsx";
 import { getContainer } from "../../../lib/container.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
@@ -18,7 +21,7 @@ export default function DocumentDetailPage({
   return (
     <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-3 py-6 sm:px-4">
       <Suspense
-        fallback={<output className="text-foreground/60">{ui.loading}</output>}
+        fallback={<p className="text-sm text-muted-foreground">{ui.loading}</p>}
       >
         <DocumentContent params={params} searchParams={searchParams} />
       </Suspense>
@@ -55,13 +58,18 @@ async function DocumentContent({
   return (
     <>
       <Link
-        className="text-sm text-foreground/60 hover:text-foreground"
+        className={buttonVariants({
+          variant: "ghost",
+          size: "sm",
+          className: "-ml-2 w-fit text-muted-foreground",
+        })}
         href="/"
       >
-        {ui.backToHome}
+        <ArrowLeftIcon className="size-4" />
+        {ui.appTitle}
       </Link>
-      <header className="flex items-center gap-3">
-        <h1 className="flex-1 text-2xl font-semibold [overflow-wrap:anywhere]">
+      <header className="flex flex-wrap items-center gap-3">
+        <h1 className="flex-1 text-xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-2xl">
           {doc.originalFilename}
         </h1>
         <DocumentStatusBadge status={doc.status} />
@@ -72,9 +80,9 @@ async function DocumentContent({
         />
       </header>
       {doc.status === "error" && doc.error !== null ? (
-        <p className="text-[#d1242f]" role="alert">
-          {doc.error}
-        </p>
+        <Callout tone="danger" role="alert">
+          <p>{doc.error}</p>
+        </Callout>
       ) : null}
       {clinical !== null ? (
         <ClinicalRecordView
@@ -100,7 +108,7 @@ async function DocumentContent({
           pages={pages}
         />
       ) : (
-        <p className="text-foreground/60">
+        <p className="text-sm text-muted-foreground">
           {pageCount === null ? ui.loading : ui.noPages}
         </p>
       )}

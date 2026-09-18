@@ -14,6 +14,7 @@ import {
   PatientSection,
   StudiesSection,
 } from "./clinical-record-sections.tsx";
+import { Callout } from "./ui/callout.tsx";
 
 export function ClinicalRecordView({
   documentId,
@@ -31,15 +32,15 @@ export function ClinicalRecordView({
   return (
     <section className="flex flex-col gap-6">
       {incomplete ? (
-        <div className="text-[#d1242f]" role="alert">
-          <strong>{ui.incompleteAnalysis}</strong>
+        <Callout tone="warning" role="alert">
+          <p className="font-semibold">{ui.incompleteAnalysis}</p>
           {failedPages.length > 0 ? (
-            <span> {failedPagesIndicator(failedPages)}</span>
+            <p> {failedPagesIndicator(failedPages)}</p>
           ) : null}
           {failedChunks > 0 ? (
-            <span> {failedChunksIndicator(failedChunks)}</span>
+            <p> {failedChunksIndicator(failedChunks)}</p>
           ) : null}
-        </div>
+        </Callout>
       ) : null}
 
       <PatientSection documentId={documentId} patient={record.patient} />

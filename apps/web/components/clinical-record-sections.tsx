@@ -85,7 +85,7 @@ function DateConflicts({
 
   return (
     <div
-      className="rounded-md border border-[#9a6700] p-3 text-sm text-[#9a6700]"
+      className="rounded-lg border border-warning/30 bg-warning-soft p-3 text-sm text-warning"
       role="alert"
     >
       <p className="font-semibold">{label}</p>
@@ -158,7 +158,7 @@ export function HospitalizationSection({
           <RecordFields documentId={documentId} fields={fields} />
           {diagnoses.length > 0 ? (
             <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-semibold text-foreground/70">
+              <h3 className="text-sm font-semibold text-muted-foreground">
                 {clinicalRecord.diagnoses}
               </h3>
               <ul className="flex list-none flex-col gap-1">
@@ -285,7 +285,7 @@ export function HistorySection({
           {groups.map((group) =>
             group.entries.length > 0 ? (
               <div key={group.label} className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold text-foreground/70">
+                <h3 className="text-sm font-semibold text-muted-foreground">
                   {group.label}
                 </h3>
                 <ul className="flex list-none flex-col gap-1">
@@ -307,7 +307,7 @@ export function HistorySection({
           )}
           {history.usualMedications.length > 0 ? (
             <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-semibold text-foreground/70">
+              <h3 className="text-sm font-semibold text-muted-foreground">
                 {clinicalRecord.usualMedications}
               </h3>
               <ul className="flex list-none flex-col gap-2">

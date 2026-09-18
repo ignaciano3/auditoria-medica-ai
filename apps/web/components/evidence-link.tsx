@@ -2,6 +2,7 @@ import { findings } from "@audit/lib/i18n";
 import type { Route } from "next";
 import Link from "next/link";
 import { viewerAnchorId } from "./pdf-viewer-utils.ts";
+import { buttonVariants } from "./ui/button.tsx";
 
 export function EvidenceLink({
   documentId,
@@ -17,7 +18,7 @@ export function EvidenceLink({
 
   return (
     <Link
-      className="rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-sm text-foreground"
+      className={buttonVariants({ variant: "secondary", size: "sm" })}
       href={href}
     >
       {findings.viewPage(page)}

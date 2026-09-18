@@ -3,11 +3,18 @@
 import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
 import { useEffect, useState } from "react";
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+} from "./icons.tsx";
+import {
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
   viewerAnchorId,
 } from "./pdf-viewer-utils.ts";
+import { Button } from "./ui/button.tsx";
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
@@ -51,62 +58,74 @@ export function PdfViewer({
       className="flex scroll-mt-4 flex-col gap-3"
       data-page={currentPage}
     >
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => goToPage(currentPage - 1)}
-          disabled={!canGoPrevious}
-        >
-          {ui.previousPage}
-        </button>
-        <span className="flex-1 text-center" aria-live="polite">
-          {pageIndicator(currentPage, pageCount)}
-        </span>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => goToPage(currentPage + 1)}
-          disabled={!canGoNext}
-        >
-          {ui.nextPage}
-        </button>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={ui.zoomOut}
-          disabled={!canZoomOut}
-          onClick={() =>
-            setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP))
-          }
-        >
-          -
-        </button>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md border border-foreground/20 bg-background px-3 py-1.5 text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={ui.zoomIn}
-          disabled={!canZoomIn}
-          onClick={() =>
-            setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP))
-          }
-        >
-          +
-        </button>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-2 shadow-xs">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={ui.previousPage}
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={!canGoPrevious}
+          >
+            <ChevronLeftIcon className="size-4" />
+          </Button>
+          <span
+            className="min-w-32 px-2 text-center text-sm font-medium"
+            aria-live="polite"
+          >
+            {pageIndicator(currentPage, pageCount)}
+          </span>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={ui.nextPage}
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={!canGoNext}
+          >
+            <ChevronRightIcon className="size-4" />
+          </Button>
+        </div>
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={ui.zoomOut}
+            disabled={!canZoomOut}
+            onClick={() =>
+              setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP))
+            }
+          >
+            <MinusIcon className="size-4" />
+          </Button>
+          <span className="w-12 text-center text-sm text-muted-foreground">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={ui.zoomIn}
+            disabled={!canZoomIn}
+            onClick={() =>
+              setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP))
+            }
+          >
+            <PlusIcon className="size-4" />
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="overflow-auto rounded-lg border border-foreground/15 bg-foreground/5">
+        <div className="overflow-auto rounded-xl border border-border bg-muted/40 p-3">
           {/* biome-ignore lint/performance/noImgElement: PDF page render with dynamic zoom/scroll */}
           <img
-            className="mx-auto block h-auto max-w-none"
+            className="mx-auto block h-auto max-w-none rounded-md shadow-sm"
             src={`/api/documents/${documentId}/pages/${currentPage}`}
             alt={pageImageAlt(currentPage)}
             style={{ width: `${zoom * 100}%` }}
           />
         </div>
         <div className="relative">
-          <aside className="flex flex-col gap-2 overflow-auto rounded-lg border border-foreground/15 bg-foreground/5 p-4 lg:absolute lg:inset-0">
-            <h2 className="text-sm font-semibold text-foreground/70">
+          <aside className="flex flex-col gap-2 overflow-auto rounded-xl border border-border bg-surface p-4 lg:absolute lg:inset-0">
+            <h2 className="text-sm font-semibold text-muted-foreground">
               {ui.transcription}
             </h2>
             {transcript.kind === "text" ? (
@@ -114,7 +133,9 @@ export function PdfViewer({
                 {transcript.text}
               </p>
             ) : (
-              <p className="text-sm text-foreground/60">{transcript.message}</p>
+              <p className="text-sm text-muted-foreground">
+                {transcript.message}
+              </p>
             )}
           </aside>
         </div>
