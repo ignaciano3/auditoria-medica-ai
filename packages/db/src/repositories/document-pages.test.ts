@@ -76,6 +76,19 @@ maybe("document pages repository", () => {
     expect(list[0]?.text).toBe("actualizado");
   });
 
+  test("updates only the text of a page, leaving the status", async () => {
+    await pages.savePage(documentId, {
+      ...page(),
+      pageNumber: 5,
+      text: "Paciente Ansel",
+      status: "vision",
+    });
+    await pages.updateText(documentId, 5, "Paciente Ariel");
+    const updated = await pages.getPage(documentId, 5);
+    expect(updated?.text).toBe("Paciente Ariel");
+    expect(updated?.status).toBe("vision");
+  });
+
   test("clears only the pages of the given document", async () => {
     await pages.savePage(documentId, page({ pageNumber: 2, text: "dos" }));
     await pages.savePage(

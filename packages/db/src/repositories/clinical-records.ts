@@ -60,6 +60,23 @@ export function createClinicalRecordRepository(db: Database) {
           });
       });
     },
+    async updateRecord(
+      documentId: string,
+      record: ClinicalRecord,
+      findings: Finding[],
+      indexed: ClinicalRecordIndex,
+    ): Promise<void> {
+      await db
+        .update(clinicalRecords)
+        .set({
+          record,
+          findings,
+          patientName: indexed.patientName ?? null,
+          admissionDate: indexed.admissionDate ?? null,
+          dischargeDate: indexed.dischargeDate ?? null,
+        })
+        .where(eq(clinicalRecords.documentId, documentId));
+    },
     async getByDocument(
       documentId: string,
     ): Promise<ClinicalRecordWithFindings | null> {
