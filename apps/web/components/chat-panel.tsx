@@ -1,10 +1,9 @@
 "use client";
 
-import { splitCitations } from "@audit/ai/chat/citations";
 import { ui } from "@audit/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { renderChatContent } from "../lib/chat-markdown.tsx";
 import type { ChatMessageView } from "../lib/serialize-chat-message.ts";
-import { EvidenceLink } from "./evidence-link.tsx";
 import { Button } from "./ui/button.tsx";
 
 type StreamPayload =
@@ -216,23 +215,13 @@ function AssistantContent({
   documentId: string;
   message: ChatMessageView;
 }) {
-  const segments = splitCitations(message.content, message.citedPages);
   return (
-    <>
-      {segments.map((segment, index) =>
-        segment.kind === "text" ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: citation segments are immutable for a rendered message
-          <span key={index}>{segment.text}</span>
-        ) : (
-          <EvidenceLink
-            // biome-ignore lint/suspicious/noArrayIndexKey: citation segments are immutable for a rendered message
-            key={index}
-            documentId={documentId}
-            page={segment.page}
-            label={`[${segment.page}]`}
-          />
-        ),
-      )}
-    </>
+    <div className="space-y-2">
+      {renderChatContent({
+        documentId,
+        content: message.content,
+        citedPages: message.citedPages,
+      })}
+    </div>
   );
 }

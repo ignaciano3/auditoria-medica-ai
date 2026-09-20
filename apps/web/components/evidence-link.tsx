@@ -9,18 +9,24 @@ export function EvidenceLink({
   page,
   hash = viewerAnchorId,
   label,
+  inline = false,
 }: {
   documentId: string;
   page: number;
   hash?: string | undefined;
   label?: string | undefined;
+  inline?: boolean | undefined;
 }) {
   const pathname = `/documents/${documentId}` as Route;
   const href = { pathname, query: { page }, hash };
 
   return (
     <Link
-      className={buttonVariants({ variant: "secondary", size: "sm" })}
+      className={
+        inline
+          ? "mx-0.5 cursor-pointer rounded border border-border px-1 font-medium text-brand underline underline-offset-2 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          : buttonVariants({ variant: "secondary", size: "sm" })
+      }
       href={href}
     >
       {label ?? findings.viewPage(page)}

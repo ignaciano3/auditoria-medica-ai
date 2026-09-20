@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { redoPageTranscription } from "../lib/actions.ts";
+import { renderBlockMarkdown } from "../lib/block-markdown.tsx";
 import { pollIntervalMs } from "./document-status.ts";
 import {
   ChevronLeftIcon,
@@ -224,9 +225,9 @@ export function PdfViewer({
       ) : (
         <div className="min-h-0 flex-1 overflow-auto p-4">
           {transcript.kind === "text" ? (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">
-              {transcript.text}
-            </p>
+            <div className="space-y-2 text-sm leading-relaxed">
+              {renderBlockMarkdown(transcript.text)}
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {transcript.message}
