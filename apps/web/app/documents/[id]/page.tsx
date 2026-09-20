@@ -156,7 +156,7 @@ async function DocumentContent({
         />
       ) : null}
       <div className="grid gap-4 lg:-mb-6 lg:h-dvh lg:grid-cols-[1.7fr_1fr] lg:pb-8">
-        <div className="min-h-0">
+        <div className="min-h-0 min-w-0">
           {pageCount !== null && pageCount > 0 ? (
             <PdfViewer
               documentId={doc.id}
@@ -177,7 +177,7 @@ async function DocumentContent({
             <p className="text-sm text-muted-foreground">{ui.noPages}</p>
           )}
         </div>
-        <div className="min-h-0">
+        <div className="min-h-0 min-w-0">
           <ChatPanel
             key={doc.id}
             documentId={doc.id}

@@ -151,7 +151,7 @@ function renderNode(
       );
     case "table":
       return (
-        <div key={key} className="my-1 overflow-x-auto">
+        <div key={key} className="my-1 max-w-full overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>

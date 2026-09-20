@@ -195,7 +195,7 @@ function ChatBubble({
         className={
           isUser
             ? "max-w-[85%] rounded-lg bg-brand px-3 py-2 text-sm text-brand-foreground"
-            : "max-w-[85%] whitespace-pre-wrap rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
+            : "min-w-0 max-w-[85%] whitespace-pre-wrap rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
         }
       >
         {isUser ? (
