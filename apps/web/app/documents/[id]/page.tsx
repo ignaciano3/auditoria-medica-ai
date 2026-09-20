@@ -128,6 +128,7 @@ async function DocumentContent({
           {pageCount !== null && pageCount > 0 ? (
             <PdfViewer
               documentId={doc.id}
+              status={doc.status}
               pageCount={pageCount}
               initialPage={initialPage}
               pages={pages}

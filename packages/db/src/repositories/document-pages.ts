@@ -19,34 +19,48 @@ function toDocumentPage(row: DocumentPageRow): DocumentPage {
   return page;
 }
 
+function toInsertValues(
+  documentId: string,
+  page: DocumentPage,
+): typeof documentPages.$inferInsert {
+  const value: typeof documentPages.$inferInsert = {
+    documentId,
+    pageNumber: page.pageNumber,
+    text: page.text,
+    docType: page.docType,
+    handwritten: page.handwritten,
+    dataBearing: page.dataBearing,
+    status: page.status,
+  };
+  if (page.imageKey !== undefined) value.imageKey = page.imageKey;
+  if (page.skipReason !== undefined) value.skipReason = page.skipReason;
+  return value;
+}
+
 export function createDocumentPageRepository(db: Database) {
   return {
-    async replaceForDocument(
-      documentId: string,
-      pages: DocumentPage[],
-    ): Promise<void> {
-      const values = pages.map((page) => {
-        const value: typeof documentPages.$inferInsert = {
-          documentId,
-          pageNumber: page.pageNumber,
-          text: page.text,
-          docType: page.docType,
-          handwritten: page.handwritten,
-          dataBearing: page.dataBearing,
-          status: page.status,
-        };
-        if (page.imageKey !== undefined) value.imageKey = page.imageKey;
-        if (page.skipReason !== undefined) value.skipReason = page.skipReason;
-        return value;
-      });
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(documentPages)
-          .where(eq(documentPages.documentId, documentId));
-        if (values.length > 0) {
-          await tx.insert(documentPages).values(values);
-        }
-      });
+    async clearForDocument(documentId: string): Promise<void> {
+      await db
+        .delete(documentPages)
+        .where(eq(documentPages.documentId, documentId));
+    },
+    async savePage(documentId: string, page: DocumentPage): Promise<void> {
+      const value = toInsertValues(documentId, page);
+      await db
+        .insert(documentPages)
+        .values(value)
+        .onConflictDoUpdate({
+          target: [documentPages.documentId, documentPages.pageNumber],
+          set: {
+            text: value.text,
+            docType: value.docType,
+            handwritten: value.handwritten,
+            dataBearing: value.dataBearing,
+            status: value.status,
+            imageKey: value.imageKey ?? null,
+            skipReason: value.skipReason ?? null,
+          },
+        });
     },
     async listForDocument(documentId: string): Promise<DocumentPage[]> {
       const rows = await db

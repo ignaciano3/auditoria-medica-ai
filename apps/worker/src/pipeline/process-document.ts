@@ -43,7 +43,8 @@ type DocumentsDependency = {
 };
 
 type PagesDependency = {
-  replaceForDocument(documentId: string, pages: DocumentPage[]): Promise<void>;
+  clearForDocument(documentId: string): Promise<void>;
+  savePage(documentId: string, page: DocumentPage): Promise<void>;
 };
 
 type ClinicalRecordsDependency = {
@@ -151,18 +152,19 @@ async function processAllPages(
     const png = pngByPage.get(page.pageNumber);
     if (!png) throw new Error("Missing rendered page");
     await deps.storage.put(key, png, "image/png");
+    let resolved: DocumentPage;
     try {
-      processedPages.push(
-        await resolvePage(deps, logger, documentId, page, png, key),
-      );
+      resolved = await resolvePage(deps, logger, documentId, page, png, key);
     } catch {
-      processedPages.push({ ...page, imageKey: key, status: "failed" });
+      resolved = { ...page, imageKey: key, status: "failed" };
       logger.error({
         event: "page_failed",
         documentId,
         pageNumber: page.pageNumber,
       });
     }
+    processedPages.push(resolved);
+    await deps.pages.savePage(documentId, resolved);
   }
 
   return processedPages;
@@ -184,6 +186,7 @@ export function createProcessDocument(
       const bytes = await deps.storage.get(document.originalKey);
       const rendered = await render(bytes);
       await deps.documents.setPageCount(documentId, rendered.length);
+      await deps.pages.clearForDocument(documentId);
       logger.info({
         event: "document_rendered",
         documentId,
@@ -222,8 +225,6 @@ export function createProcessDocument(
         classified,
         rendered,
       );
-
-      await deps.pages.replaceForDocument(documentId, processedPages);
 
       await runExtraction(deps, documentId, processedPages);
     } catch (error) {

@@ -17,6 +17,10 @@ export type PageTranscriptInput = {
   skipReason?: string;
 };
 
+export function processedPageCount(pages: PageTranscriptInput[]): number {
+  return pages.filter((page) => page.status !== "pending").length;
+}
+
 export function canRedoTranscription(
   page: PageTranscriptInput | undefined,
 ): boolean {
