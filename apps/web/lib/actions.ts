@@ -1,6 +1,11 @@
 "use server";
 
-import { errors } from "@audit/lib";
+import {
+  encryptSecret,
+  errors,
+  getEnv,
+  requireEncryptionKey,
+} from "@audit/lib";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { DOCUMENTS_TAG, documentTag } from "./cache-tags.ts";
 import { getContainer } from "./container.ts";
@@ -10,6 +15,8 @@ import {
 } from "./documents-service.ts";
 import { saveFindingReview } from "./findings-service.ts";
 import type { ReviewInput } from "./findings-view.ts";
+import { type SaveSettingsResult, saveSettings } from "./settings-service.ts";
+import type { SettingsInput } from "./settings-view.ts";
 
 export type UploadActionResult = { ok: true } | { ok: false; error: string };
 
@@ -104,4 +111,28 @@ export async function revalidateDocumentData(
   revalidateTag(DOCUMENTS_TAG, "max");
   revalidatePath("/documents/[id]", "page");
   revalidatePath("/");
+}
+
+export async function saveAiSettings(
+  input: SettingsInput,
+): Promise<SaveSettingsResult> {
+  let encrypt: (plaintext: string) => string;
+  try {
+    const key = requireEncryptionKey({
+      SETTINGS_ENCRYPTION_KEY: getEnv().SETTINGS_ENCRYPTION_KEY,
+    });
+    encrypt = (plaintext) => encryptSecret(plaintext, key);
+  } catch {
+    return { ok: false, error: errors.settingsNoEncryptionKey };
+  }
+  try {
+    const result = await saveSettings(
+      { appSettings: getContainer().appSettings, encrypt },
+      input,
+    );
+    if (result.ok) revalidatePath("/settings");
+    return result;
+  } catch {
+    return { ok: false, error: errors.settingsSaveFailed };
+  }
 }

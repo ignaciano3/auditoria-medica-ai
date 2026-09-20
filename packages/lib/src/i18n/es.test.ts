@@ -7,6 +7,7 @@ import {
   failedChunksIndicator,
   failedPagesIndicator,
   medicationStatusLabels,
+  settings,
   ui,
 } from "./es.ts";
 
@@ -122,5 +123,31 @@ describe("medicationStatusLabels", () => {
       stopped: "Suspendida",
       unknown: "Desconocida",
     });
+  });
+});
+
+describe("settings copy", () => {
+  test("provides a non-empty Spanish label for every settings string", () => {
+    expect(settings.title.length).toBeGreaterThan(0);
+    expect(settings.description.length).toBeGreaterThan(0);
+    expect(settings.save.length).toBeGreaterThan(0);
+    expect(Object.values(settings).every((value) => value.length > 0)).toBe(
+      true,
+    );
+  });
+});
+
+describe("settings errors", () => {
+  test("exposes the new settings error messages", () => {
+    expect(errors.settingsNoEncryptionKey).toBe(
+      "Falta SETTINGS_ENCRYPTION_KEY en el entorno: no se pueden guardar claves.",
+    );
+    expect(errors.settingsInvalidProvider).toBe("Proveedor no válido.");
+    expect(errors.settingsInvalidModel).toBe(
+      "El modelo no corresponde al proveedor seleccionado.",
+    );
+    expect(errors.settingsSaveFailed).toBe(
+      "No se pudo guardar la configuración.",
+    );
   });
 });

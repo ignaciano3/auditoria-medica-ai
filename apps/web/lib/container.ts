@@ -1,4 +1,5 @@
 import {
+  createAppSettingsRepository,
   createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
@@ -25,6 +26,7 @@ export type Container = {
   pages: DocumentPageRepository;
   clinicalRecords: ClinicalRecordRepository;
   findingReviews: FindingReviewRepository;
+  appSettings: ReturnType<typeof createAppSettingsRepository>;
   storage: StorageProvider;
   queue: JobQueue;
 };
@@ -40,6 +42,7 @@ export function getContainer(): Container {
       pages: createDocumentPageRepository(db),
       clinicalRecords: createClinicalRecordRepository(db),
       findingReviews: createFindingReviewRepository(db),
+      appSettings: createAppSettingsRepository(db),
       storage: new S3Storage({
         endpoint: env.S3_ENDPOINT,
         bucket: env.S3_BUCKET,

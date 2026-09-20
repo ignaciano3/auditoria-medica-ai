@@ -4,7 +4,14 @@ export {
   parseEncryptionKey,
   requireEncryptionKey,
 } from "./crypto/secrets.ts";
-export { type Env, getEnv, parseEnv } from "./env.ts";
+export {
+  type Env,
+  getEnv,
+  PROVIDER_MODELS,
+  type Provider,
+  parseEnv,
+  type SupportedModel,
+} from "./env.ts";
 export {
   clinicalRecord,
   deleteConfirm,
@@ -18,6 +25,7 @@ export {
   pageImageAlt,
   pageIndicator,
   processing,
+  settings,
   ui,
 } from "./i18n/es.ts";
 export { InMemoryQueue } from "./queue/in-memory-queue.ts";

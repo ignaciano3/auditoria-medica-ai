@@ -42,6 +42,11 @@ export const errors = {
   noteTooLong: "La nota no puede superar los 2000 caracteres.",
   redoTranscriptionFailed: "No se pudo rehacer la transcripción.",
   reExtractFailed: "No se pudo reextraer la información.",
+  settingsNoEncryptionKey:
+    "Falta SETTINGS_ENCRYPTION_KEY en el entorno: no se pueden guardar claves.",
+  settingsInvalidProvider: "Proveedor no válido.",
+  settingsInvalidModel: "El modelo no corresponde al proveedor seleccionado.",
+  settingsSaveFailed: "No se pudo guardar la configuración.",
 } as const;
 
 export function deleteConfirm(filename: string): string {
@@ -157,6 +162,36 @@ export const processing = {
   notDataBearing: "Página sin datos clínicos: no se extrae.",
   pending: "Página pendiente de procesamiento.",
   failed: "No se pudo procesar esta página.",
+} as const;
+
+export const settings = {
+  title: "Configuración de IA",
+  description:
+    "Elegí el proveedor y modelo para extracción y OCR, y guardá tus claves de API.",
+  llmSection: "Extracción (LLM)",
+  ocrSection: "OCR / transcripción",
+  provider: "Proveedor",
+  model: "Modelo",
+  keysSection: "Claves de API",
+  keyOpenai: "OpenAI",
+  keyDeepseek: "DeepSeek",
+  keyQwen: "Qwen (DashScope)",
+  keyOpencode: "OpenCode Go",
+  configured: "Configurada",
+  keyPlaceholder: "Pegá la clave para reemplazarla",
+  clearKey: "Borrar clave",
+  save: "Guardar",
+  saving: "Guardando…",
+  saved: "Configuración guardada. Se aplica al próximo procesamiento.",
+  goWarning:
+    "OpenCode Go está pensado para agentes de programación, no para pipelines de documentos médicos. El tráfico se monitorea por abuso y puede ser limitado.",
+  goRetention:
+    "La retención de datos varía por modelo de Go; algunos retienen hasta 30 días. No envíes datos que no debas exponer.",
+  noEncryptionKey:
+    "Falta SETTINGS_ENCRYPTION_KEY en el entorno: no se pueden guardar claves.",
+  invalidProvider: "Proveedor no válido.",
+  invalidModel: "El modelo no corresponde al proveedor seleccionado.",
+  saveFailed: "No se pudo guardar la configuración.",
 } as const;
 
 export const ui = {
