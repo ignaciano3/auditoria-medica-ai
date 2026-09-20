@@ -132,3 +132,18 @@ export const accessLog = pgTable("access_log", {
     .notNull()
     .defaultNow(),
 });
+
+export const appSettings = pgTable("app_settings", {
+  id: integer("id").primaryKey().default(1),
+  llmProvider: text("llm_provider").notNull(),
+  llmModel: text("llm_model").notNull(),
+  ocrProvider: text("ocr_provider").notNull(),
+  ocrModel: text("ocr_model").notNull(),
+  openaiApiKeyEnc: text("openai_api_key_enc"),
+  deepseekApiKeyEnc: text("deepseek_api_key_enc"),
+  dashscopeApiKeyEnc: text("dashscope_api_key_enc"),
+  opencodeApiKeyEnc: text("opencode_api_key_enc"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

@@ -1,4 +1,5 @@
 export { type Database, getDb } from "./client.ts";
+export { createAppSettingsRepository } from "./repositories/app-settings.ts";
 export {
   type ClinicalRecordIndex,
   type ClinicalRecordRow,
@@ -20,6 +21,7 @@ export {
 } from "./repositories/finding-reviews.ts";
 export {
   accessLog,
+  appSettings,
   chatMessages,
   clinicalRecords,
   documentPages,
