@@ -5,9 +5,43 @@ export type InlineMarkdownNode =
   | { type: "strong"; children: InlineMarkdownNode[] }
   | { type: "em"; children: InlineMarkdownNode[] }
   | { type: "code"; value: string }
-  | { type: "link"; href: string; children: InlineMarkdownNode[] };
+  | { type: "link"; href: string; children: InlineMarkdownNode[] }
+  | { type: "checkbox"; checked: boolean };
 
 const LINK_PATTERN = /^\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/;
+const CHECKBOX_PATTERN = /^\[([ xX])\](?!\()/;
+
+const ENTITY_PATTERN = /&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g;
+
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: "\u00A0",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  ndash: "\u2013",
+  mdash: "\u2014",
+};
+
+function fromCodePoint(code: number): string | null {
+  if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) return null;
+  return String.fromCodePoint(code);
+}
+
+function decodeEntities(input: string): string {
+  return input.replace(ENTITY_PATTERN, (match, body: string) => {
+    if (body.startsWith("#x") || body.startsWith("#X")) {
+      const code = Number.parseInt(body.slice(2), 16);
+      return Number.isNaN(code) ? match : (fromCodePoint(code) ?? match);
+    }
+    if (body.startsWith("#")) {
+      const code = Number.parseInt(body.slice(1), 10);
+      return Number.isNaN(code) ? match : (fromCodePoint(code) ?? match);
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? match;
+  });
+}
 
 function hasInnerContent(inner: string): boolean {
   return inner.length > 0 && !/^\s/.test(inner) && !/\s$/.test(inner);
@@ -20,7 +54,7 @@ export function parseInlineMarkdown(input: string): InlineMarkdownNode[] {
 
   const flushText = () => {
     if (text.length > 0) {
-      nodes.push({ type: "text", value: text });
+      nodes.push({ type: "text", value: decodeEntities(text) });
       text = "";
     }
   };
@@ -48,6 +82,13 @@ export function parseInlineMarkdown(input: string): InlineMarkdownNode[] {
           children: parseInlineMarkdown(match[1] ?? ""),
         });
         index += match[0].length;
+        continue;
+      }
+      const checkbox = CHECKBOX_PATTERN.exec(input.slice(index));
+      if (checkbox) {
+        flushText();
+        nodes.push({ type: "checkbox", checked: checkbox[1] !== " " });
+        index += checkbox[0].length;
         continue;
       }
     }
@@ -115,6 +156,17 @@ function renderNodes(
           >
             {renderNodes(node.children, `${key}.`)}
           </a>
+        );
+      case "checkbox":
+        return (
+          <input
+            key={key}
+            type="checkbox"
+            checked={node.checked}
+            disabled
+            readOnly
+            className="mr-1 inline-block size-3.5 shrink-0 align-[-2px] accent-brand"
+          />
         );
       default:
         return null;

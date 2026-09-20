@@ -80,6 +80,34 @@ describe("parseInlineMarkdown", () => {
       { type: "text", value: "2 * 3 = 6" },
     ]);
   });
+
+  test("decodes &nbsp; into a non-breaking space", () => {
+    expect(parseInlineMarkdown("TA&nbsp;120/80")).toEqual([
+      { type: "text", value: "TA\u00A0120/80" },
+    ]);
+  });
+
+  test("decodes common named and numeric entities", () => {
+    expect(parseInlineMarkdown("A &amp; B &#39;x&#39; &#x41;")).toEqual([
+      { type: "text", value: "A & B 'x' A" },
+    ]);
+  });
+
+  test("leaves unknown entities as literal text", () => {
+    expect(parseInlineMarkdown("&foo; &nbsp")).toEqual([
+      { type: "text", value: "&foo; &nbsp" },
+    ]);
+  });
+
+  test("parses inline checkboxes", () => {
+    expect(parseInlineMarkdown("TA [x] control [ ] pendiente")).toEqual([
+      { type: "text", value: "TA " },
+      { type: "checkbox", checked: true },
+      { type: "text", value: " control " },
+      { type: "checkbox", checked: false },
+      { type: "text", value: " pendiente" },
+    ]);
+  });
 });
 
 describe("renderInlineMarkdown", () => {
@@ -109,5 +137,20 @@ describe("renderInlineMarkdown", () => {
     );
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toBe("<img src=x onerror=alert(1)> ok");
+  });
+
+  test("renders nbsp as a non-breaking space, not the literal entity", () => {
+    const { container } = render(<div>{renderInlineMarkdown("a&nbsp;b")}</div>);
+    expect(container.textContent).toBe("a\u00A0b");
+  });
+
+  test("renders inline checkboxes with their checked state", () => {
+    const { getAllByRole } = render(
+      <div>{renderInlineMarkdown("A [x] B [ ] C")}</div>,
+    );
+    const boxes = getAllByRole("checkbox") as HTMLInputElement[];
+    expect(boxes).toHaveLength(2);
+    expect(boxes[0]?.checked).toBe(true);
+    expect(boxes[1]?.checked).toBe(false);
   });
 });
