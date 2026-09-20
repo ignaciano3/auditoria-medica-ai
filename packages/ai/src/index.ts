@@ -7,6 +7,13 @@ export {
   validateCitations,
 } from "./chat/citations.ts";
 export {
+  buildChatUserPrompt,
+  CHAT_SYSTEM_PROMPT,
+  type ChatContext,
+  type ChatTurn,
+  INSUFFICIENT_EVIDENCE_REPLY,
+} from "./chat/prompts.ts";
+export {
   type RetrievedPage,
   type RetrieveOptions,
   retrievePages,
