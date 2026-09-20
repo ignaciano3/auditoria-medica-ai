@@ -9,7 +9,7 @@ import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx
 import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
 import { FindingsSection } from "../../../components/findings-section.tsx";
-import { ArrowLeftIcon } from "../../../components/icons.tsx";
+import { ArrowLeftIcon, SpinnerIcon } from "../../../components/icons.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 import { ReExtractButton } from "../../../components/re-extract-button.tsx";
 import { DetailSkeleton } from "../../../components/skeletons.tsx";
@@ -133,10 +133,16 @@ async function DocumentContent({
               initialPage={initialPage}
               pages={pages}
             />
+          ) : pageCount === null ? (
+            <div
+              className="flex h-full min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-border bg-surface p-6 text-sm text-muted-foreground shadow-xs"
+              role="status"
+            >
+              <SpinnerIcon className="size-6 text-brand" />
+              <p>{ui.loading}</p>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              {pageCount === null ? ui.loading : ui.noPages}
-            </p>
+            <p className="text-sm text-muted-foreground">{ui.noPages}</p>
           )}
         </div>
         <div className="min-h-0">
