@@ -53,6 +53,10 @@ export function deleteConfirm(filename: string): string {
   return `¿Eliminar "${filename}"? Esta acción no se puede deshacer.`;
 }
 
+export function settingsMissingKey(provider: string): string {
+  return `Falta la clave de API para ${provider}.`;
+}
+
 export function pageIndicator(page: number, total: number): string {
   return `Página ${page} de ${total}`;
 }

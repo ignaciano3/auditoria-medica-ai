@@ -8,6 +8,7 @@ import {
   failedPagesIndicator,
   medicationStatusLabels,
   settings,
+  settingsMissingKey,
   ui,
 } from "./es.ts";
 
@@ -149,5 +150,11 @@ describe("settings errors", () => {
     expect(errors.settingsSaveFailed).toBe(
       "No se pudo guardar la configuración.",
     );
+  });
+
+  test("names the provider in the missing-key message", () => {
+    const message = settingsMissingKey("opencode");
+    expect(message.length).toBeGreaterThan(0);
+    expect(message).toContain("opencode");
   });
 });

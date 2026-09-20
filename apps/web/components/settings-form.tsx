@@ -1,6 +1,6 @@
 "use client";
 
-import { settings } from "@audit/lib/i18n";
+import { errors, settings } from "@audit/lib/i18n";
 import { type FormEvent, useState } from "react";
 import { saveAiSettings } from "../lib/actions.ts";
 import type { SettingsView } from "../lib/settings-view.ts";
@@ -56,21 +56,25 @@ export function SettingsForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState({ kind: "saving" });
-    const result = await saveAiSettings({
-      llmProvider,
-      llmModel,
-      ocrProvider,
-      ocrModel,
-      keys,
-      clearKeys,
-    });
-    if (!result.ok) {
-      setState({ kind: "error", message: result.error });
-      return;
+    try {
+      const result = await saveAiSettings({
+        llmProvider,
+        llmModel,
+        ocrProvider,
+        ocrModel,
+        keys,
+        clearKeys,
+      });
+      if (!result.ok) {
+        setState({ kind: "error", message: result.error });
+        return;
+      }
+      setState({ kind: "saved" });
+      setKeys({ openai: "", deepseek: "", qwen: "", opencode: "" });
+      setClearKeys([]);
+    } catch {
+      setState({ kind: "error", message: errors.settingsSaveFailed });
     }
-    setState({ kind: "saved" });
-    setKeys({ openai: "", deepseek: "", qwen: "", opencode: "" });
-    setClearKeys([]);
   }
 
   return (

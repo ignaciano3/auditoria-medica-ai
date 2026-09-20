@@ -5,6 +5,7 @@ import {
   errors,
   getEnv,
   requireEncryptionKey,
+  settingsMissingKey,
 } from "@audit/lib";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { DOCUMENTS_TAG, documentTag } from "./cache-tags.ts";
@@ -16,7 +17,11 @@ import {
 import { saveFindingReview } from "./findings-service.ts";
 import type { ReviewInput } from "./findings-view.ts";
 import { type SaveSettingsResult, saveSettings } from "./settings-service.ts";
-import type { SettingsInput } from "./settings-view.ts";
+import {
+  missingEffectiveKey,
+  type SettingsInput,
+  validateSettingsInput,
+} from "./settings-view.ts";
 
 export type UploadActionResult = { ok: true } | { ok: false; error: string };
 
@@ -116,16 +121,30 @@ export async function revalidateDocumentData(
 export async function saveAiSettings(
   input: SettingsInput,
 ): Promise<SaveSettingsResult> {
+  const hasWrites =
+    Object.values(input.keys).some(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    ) || (input.clearKeys?.length ?? 0) > 0;
   let encrypt: (plaintext: string) => string;
-  try {
-    const key = requireEncryptionKey({
-      SETTINGS_ENCRYPTION_KEY: getEnv().SETTINGS_ENCRYPTION_KEY,
-    });
-    encrypt = (plaintext) => encryptSecret(plaintext, key);
-  } catch {
-    return { ok: false, error: errors.settingsNoEncryptionKey };
+  if (hasWrites) {
+    try {
+      const key = requireEncryptionKey({
+        SETTINGS_ENCRYPTION_KEY: getEnv().SETTINGS_ENCRYPTION_KEY,
+      });
+      encrypt = (plaintext) => encryptSecret(plaintext, key);
+    } catch {
+      return { ok: false, error: errors.settingsNoEncryptionKey };
+    }
+  } else {
+    encrypt = () => {
+      throw new Error(errors.settingsSaveFailed);
+    };
   }
   try {
+    const validation = validateSettingsInput(input);
+    if (!validation.ok) return validation;
+    const missing = missingEffectiveKey(input, getEnv());
+    if (missing) return { ok: false, error: settingsMissingKey(missing) };
     const result = await saveSettings(
       { appSettings: getContainer().appSettings, encrypt },
       input,
