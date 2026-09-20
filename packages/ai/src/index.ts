@@ -1,4 +1,12 @@
 export {
+  allowedCitationPages,
+  type CitationSegment,
+  parseCitations,
+  sourcePagesFromContext,
+  splitCitations,
+  validateCitations,
+} from "./chat/citations.ts";
+export {
   type RetrievedPage,
   type RetrieveOptions,
   retrievePages,
