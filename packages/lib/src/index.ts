@@ -33,6 +33,7 @@ export {
   PgBossQueue,
   QueuePublishError,
 } from "./queue/pg-boss-queue.ts";
+export { applyEnvFallback } from "./settings/effective-settings.ts";
 export { InMemoryStorage } from "./storage/in-memory-storage.ts";
 export {
   S3Storage,
