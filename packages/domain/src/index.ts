@@ -1,4 +1,17 @@
 export {
+  AI_PROVIDER_KEYS,
+  LLM_PROVIDERS,
+  type LlmProviderName,
+  OCR_PROVIDERS,
+  type OcrProviderName,
+  OPENCODE_GO_BASE_URL,
+  OPENCODE_USER_AGENT,
+  opencodeDefaultHeaders,
+  type ProviderKey,
+  type ProviderSettings,
+  type StoredProviderSettings,
+} from "./ai-settings.ts";
+export {
   boundingBoxSchema,
   CLINICAL_EVENT_TYPES,
   type ClinicalEvent,

@@ -27,10 +27,9 @@ describe("parseEnv", () => {
   test("defaults to the tesseract OCR provider", () => {
     const result = parseEnv({
       ...BASE,
-      LLM_PROVIDER: "openai",
+      LLM_PROVIDER: "heuristic",
       LLM_MODEL: "gpt-5.6-terra",
       OCR_MODEL: "gpt-5.6-luna",
-      OPENAI_API_KEY: "sk-test",
     });
     expect(result.OCR_PROVIDER).toBe("tesseract");
   });
@@ -40,26 +39,13 @@ describe("parseEnv", () => {
       ...BASE,
       LLM_PROVIDER: "heuristic",
       LLM_MODEL: "gpt-5.6-terra",
-      OCR_PROVIDER: "openai",
+      OCR_PROVIDER: "local",
       OCR_MODEL: "gpt-5.6-luna",
-      OPENAI_API_KEY: "sk-test",
     });
     expect(result.LLM_PROVIDER).toBe("heuristic");
   });
 
-  test("accepts the tesseract OCR provider", () => {
-    const result = parseEnv({
-      ...BASE,
-      LLM_PROVIDER: "openai",
-      LLM_MODEL: "gpt-5.6-terra",
-      OCR_PROVIDER: "tesseract",
-      OCR_MODEL: "gpt-5.6-luna",
-      OPENAI_API_KEY: "sk-test",
-    });
-    expect(result.OCR_PROVIDER).toBe("tesseract");
-  });
-
-  test("accepts fully local providers without an OpenAI key", () => {
+  test("accepts fully local providers without keys", () => {
     const result = parseEnv({
       ...BASE,
       LLM_PROVIDER: "heuristic",
@@ -71,25 +57,38 @@ describe("parseEnv", () => {
     expect(result.OPENAI_API_KEY).toBe("");
   });
 
+  test("allows an empty OpenAI key because settings may supply it", () => {
+    const result = parseEnv({
+      ...BASE,
+      LLM_PROVIDER: "openai",
+      LLM_MODEL: "gpt-5.6-terra",
+      OCR_PROVIDER: "local",
+      OCR_MODEL: "gpt-5.6-luna",
+    });
+    expect(result.OPENAI_API_KEY).toBe("");
+  });
+
+  test("accepts the opencode provider and its key variable", () => {
+    const result = parseEnv({
+      ...BASE,
+      LLM_PROVIDER: "opencode",
+      LLM_MODEL: "deepseek-v4.1-flash",
+      OCR_PROVIDER: "opencode",
+      OCR_MODEL: "deepseek-v4-flash-vision-exp",
+      OPENCODE_API_KEY: "go-test",
+      SETTINGS_ENCRYPTION_KEY: "a".repeat(32),
+    });
+    expect(result.LLM_PROVIDER).toBe("opencode");
+    expect(result.OPENCODE_API_KEY).toBe("go-test");
+    expect(result.SETTINGS_ENCRYPTION_KEY).toBe("a".repeat(32));
+  });
+
   test("rejects a retired or unknown model", () => {
     expect(() =>
       parseEnv({
         ...BASE,
         LLM_PROVIDER: "openai",
         LLM_MODEL: "gpt-5.5",
-        OCR_PROVIDER: "local",
-        OCR_MODEL: "gpt-5.6-luna",
-        OPENAI_API_KEY: "sk-test",
-      }),
-    ).toThrow();
-  });
-
-  test("rejects an OpenAI provider without an OpenAI key", () => {
-    expect(() =>
-      parseEnv({
-        ...BASE,
-        LLM_PROVIDER: "openai",
-        LLM_MODEL: "gpt-5.6-terra",
         OCR_PROVIDER: "local",
         OCR_MODEL: "gpt-5.6-luna",
       }),
@@ -128,57 +127,12 @@ describe("parseEnv provider selection", () => {
     expect(result.LLM_PROVIDER).toBe("qwen");
   });
 
-  test("rejects a deepseek provider without a DeepSeek key", () => {
-    expect(() =>
-      parseEnv({
-        ...LOCAL,
-        LLM_PROVIDER: "deepseek",
-        LLM_MODEL: "deepseek-flash",
-      }),
-    ).toThrow();
-  });
-
-  test("rejects a qwen provider without a DashScope key", () => {
-    expect(() =>
-      parseEnv({
-        ...LOCAL,
-        LLM_PROVIDER: "qwen",
-        LLM_MODEL: "qwen3.8-flash",
-      }),
-    ).toThrow();
-  });
-
-  test("accepts a qwen OCR provider with its own key", () => {
-    const result = parseEnv({
-      ...BASE,
-      LLM_PROVIDER: "heuristic",
-      LLM_MODEL: "gpt-5.6-terra",
-      OCR_PROVIDER: "qwen",
-      OCR_MODEL: "qwen3.8-flash",
-      DASHSCOPE_API_KEY: "ds-test",
-    });
-    expect(result.OCR_PROVIDER).toBe("qwen");
-  });
-
-  test("rejects a qwen OCR provider without a DashScope key", () => {
-    expect(() =>
-      parseEnv({
-        ...BASE,
-        LLM_PROVIDER: "heuristic",
-        LLM_MODEL: "gpt-5.6-terra",
-        OCR_PROVIDER: "qwen",
-        OCR_MODEL: "qwen3.8-flash",
-      }),
-    ).toThrow();
-  });
-
   test("rejects a model that does not belong to the selected LLM provider", () => {
     expect(() =>
       parseEnv({
         ...LOCAL,
         LLM_PROVIDER: "qwen",
         LLM_MODEL: "deepseek-flash",
-        DASHSCOPE_API_KEY: "ds-test",
       }),
     ).toThrow();
   });
@@ -191,7 +145,6 @@ describe("parseEnv provider selection", () => {
         LLM_MODEL: "gpt-5.6-terra",
         OCR_PROVIDER: "qwen",
         OCR_MODEL: "gpt-5.6-luna",
-        DASHSCOPE_API_KEY: "ds-test",
       }),
     ).toThrow();
   });
