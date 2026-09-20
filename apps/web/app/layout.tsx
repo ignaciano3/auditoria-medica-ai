@@ -1,3 +1,4 @@
+import { settings } from "@audit/lib/i18n";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark } from "../components/icons.tsx";
@@ -25,7 +26,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <BrandMark className="size-6" />
               <span>Auditoría Médica</span>
             </Link>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-3">
+              <Link
+                className="text-sm text-muted-foreground transition-colors hover:text-brand"
+                href="/settings"
+              >
+                {settings.title}
+              </Link>
               <ThemeToggle />
             </div>
           </div>
