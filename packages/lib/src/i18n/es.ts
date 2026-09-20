@@ -207,6 +207,7 @@ export const ui = {
   backToHome: "← Historias clínicas",
   newDocument: "Nueva historia",
   upload: "Subir",
+  dropHint: "o arrastra un PDF aquí",
   uploading: "Subiendo…",
   uploadSuccess: "Documento subido.",
   loading: "Cargando…",
