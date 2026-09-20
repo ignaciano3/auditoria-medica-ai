@@ -1,4 +1,10 @@
 export { classifyPages } from "./classification/classify-pages.ts";
+export {
+  createOcrProviders,
+  OcrProviderKeyError,
+  type OcrProviders,
+  resolveOcrVisionConfig,
+} from "./ocr/factory.ts";
 export { LocalPageClassifier } from "./ocr/local-page-classifier.ts";
 export type {
   OCRProvider,

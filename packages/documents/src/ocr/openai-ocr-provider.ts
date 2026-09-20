@@ -74,6 +74,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
   private readonly classifyDetail: ImageDetail;
   private readonly transcribeDetail: ImageDetail;
   private readonly reasoningEffort: string | null;
+  private readonly defaultHeaders: Record<string, string> | undefined;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -86,6 +87,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
     classifyDetail?: ImageDetail;
     transcribeDetail?: ImageDetail;
     reasoningEffort?: string | null;
+    defaultHeaders?: Record<string, string>;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
@@ -96,6 +98,7 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
     this.transcribeDetail = options.transcribeDetail ?? "high";
     this.reasoningEffort =
       options.reasoningEffort === undefined ? "low" : options.reasoningEffort;
+    this.defaultHeaders = options.defaultHeaders;
   }
 
   private get client(): OpenAICompatibleClient {
@@ -105,6 +108,9 @@ export class OpenAIVisionOCRProvider implements OCRProvider {
         (new OpenAI({
           apiKey: this.apiKey,
           ...(this.baseURL ? { baseURL: this.baseURL } : {}),
+          ...(this.defaultHeaders
+            ? { defaultHeaders: this.defaultHeaders }
+            : {}),
         }) as unknown as OpenAICompatibleClient);
     }
     return this.cachedClient;
