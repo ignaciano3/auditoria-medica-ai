@@ -1,3 +1,4 @@
+export type { ChatRole } from "./chat.ts";
 export {
   boundingBoxSchema,
   CLINICAL_EVENT_TYPES,
