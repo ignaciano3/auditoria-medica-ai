@@ -3,16 +3,23 @@ import type {
   ClinicalRecord,
   LabResult,
   Medication,
+  MicrobiologyResult,
   Source,
+  Study,
 } from "@audit/domain";
 import {
   countsBySection,
+  dateConflictItemKey,
+  diagnosisItemKey,
   displayValue,
+  historyEntryItemKey,
   isPlaceholderValue,
   labResultItemKey,
   medicationItemKey,
   mergeSourcePages,
+  microbiologyItemKey,
   sourcePages,
+  studyItemKey,
 } from "./clinical-record-view.ts";
 
 function source(pageNumber: number): Source {
@@ -73,6 +80,44 @@ describe("list item keys", () => {
     });
     expect(labResultItemKey(result(), 0)).not.toBe(
       labResultItemKey(result(), 1),
+    );
+  });
+
+  test("disambiguates diagnoses that share a value", () => {
+    expect(diagnosisItemKey("Neumonía", 0)).not.toBe(
+      diagnosisItemKey("Neumonía", 1),
+    );
+  });
+
+  test("disambiguates history entries that share a label and value", () => {
+    expect(
+      historyEntryItemKey("Antecedentes patológicos", "Niega HTA, DBT2", 0),
+    ).not.toBe(
+      historyEntryItemKey("Antecedentes patológicos", "Niega HTA, DBT2", 1),
+    );
+  });
+
+  test("disambiguates studies that share a type", () => {
+    const study = (): Study => ({
+      type: { value: "TAC de tórax", sources: [source(1)] },
+      sources: [source(1)],
+    });
+    expect(studyItemKey(study(), 0)).not.toBe(studyItemKey(study(), 1));
+  });
+
+  test("disambiguates microbiology results that share an organism", () => {
+    const result = (): MicrobiologyResult => ({
+      organism: { value: "E. coli", sources: [source(1)] },
+      sources: [source(1)],
+    });
+    expect(microbiologyItemKey(result(), 0)).not.toBe(
+      microbiologyItemKey(result(), 1),
+    );
+  });
+
+  test("disambiguates date conflicts that share a value", () => {
+    expect(dateConflictItemKey("13/02/2026", 0)).not.toBe(
+      dateConflictItemKey("13/02/2026", 1),
     );
   });
 });

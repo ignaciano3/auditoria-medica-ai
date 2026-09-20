@@ -2,7 +2,9 @@ import type {
   ClinicalRecord,
   LabResult,
   Medication,
+  MicrobiologyResult,
   Source,
+  Study,
 } from "@audit/domain";
 
 export function displayValue(
@@ -28,6 +30,39 @@ export function medicationItemKey(
 
 export function labResultItemKey(result: LabResult, index: number): string {
   return `${displayValue(result.name.value) ?? "lab"}-${displayValue(result.value.value) ?? ""}-${index}`;
+}
+
+export function diagnosisItemKey(
+  value: string | undefined,
+  index: number,
+): string {
+  return `${displayValue(value) ?? "diagnosis"}-${index}`;
+}
+
+export function historyEntryItemKey(
+  label: string,
+  value: string | undefined,
+  index: number,
+): string {
+  return `${label}-${displayValue(value) ?? "entry"}-${index}`;
+}
+
+export function studyItemKey(study: Study, index: number): string {
+  return `${displayValue(study.type.value) ?? "study"}-${index}`;
+}
+
+export function microbiologyItemKey(
+  result: MicrobiologyResult,
+  index: number,
+): string {
+  return `${displayValue(result.organism?.value ?? result.sample?.value) ?? "micro"}-${index}`;
+}
+
+export function dateConflictItemKey(
+  value: string | undefined,
+  index: number,
+): string {
+  return `${displayValue(value) ?? "conflict"}-${index}`;
 }
 
 export function sourcePages(sources: Source[]): number[] {

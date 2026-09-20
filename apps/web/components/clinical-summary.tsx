@@ -1,10 +1,14 @@
 import type { ClinicalSummary, MicrobiologyResult, Study } from "@audit/domain";
 import { clinicalRecord, summary as summaryLabels } from "@audit/lib/i18n";
 import {
+  diagnosisItemKey,
   displayValue,
+  historyEntryItemKey,
   medicationItemKey,
   mergeSourcePages,
+  microbiologyItemKey,
   sourcePages,
+  studyItemKey,
 } from "../lib/clinical-record-view.ts";
 import { durationText } from "../lib/summary-view.ts";
 import {
@@ -151,9 +155,9 @@ export function ClinicalSummaryView({
                 <RecordEmpty />
               ) : (
                 <ul className="flex list-none flex-col gap-1">
-                  {summary.diagnoses.map((diagnosis) => (
+                  {summary.diagnoses.map((diagnosis, index) => (
                     <li
-                      key={diagnosis.value}
+                      key={diagnosisItemKey(diagnosis.value, index)}
                       className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                     >
                       <span>{displayValue(diagnosis.value)}</span>
@@ -184,9 +188,13 @@ export function ClinicalSummaryView({
                     {group.label}
                   </h3>
                   <ul className="flex list-none flex-col gap-1">
-                    {group.entries.map((entry) => (
+                    {group.entries.map((entry, index) => (
                       <li
-                        key={`${group.label}-${entry.value}`}
+                        key={historyEntryItemKey(
+                          group.label,
+                          entry.value,
+                          index,
+                        )}
                         className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                       >
                         <span>{displayValue(entry.value)}</span>
@@ -244,9 +252,9 @@ export function ClinicalSummaryView({
           <RecordEmpty />
         ) : (
           <ul className="flex list-none flex-col gap-2">
-            {summary.studies.map((study) => (
+            {summary.studies.map((study, index) => (
               <RecordItem
-                key={study.type.value}
+                key={studyItemKey(study, index)}
                 documentId={documentId}
                 title={displayValue(study.type.value)}
                 fields={[
@@ -276,9 +284,9 @@ export function ClinicalSummaryView({
           <RecordEmpty />
         ) : (
           <ul className="flex list-none flex-col gap-2">
-            {summary.microbiology.map((result) => (
+            {summary.microbiology.map((result, index) => (
               <RecordItem
-                key={result.organism?.value ?? result.sample?.value ?? "micro"}
+                key={microbiologyItemKey(result, index)}
                 documentId={documentId}
                 title={displayValue(
                   result.organism?.value ?? result.sample?.value,

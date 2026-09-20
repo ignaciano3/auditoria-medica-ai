@@ -11,11 +11,16 @@ import type {
 } from "@audit/domain";
 import { clinicalRecord, medicationStatusLabels } from "@audit/lib/i18n";
 import {
+  dateConflictItemKey,
+  diagnosisItemKey,
   displayValue,
+  historyEntryItemKey,
   labResultItemKey,
   medicationItemKey,
   mergeSourcePages,
+  microbiologyItemKey,
   sourcePages,
+  studyItemKey,
 } from "../lib/clinical-record-view.ts";
 import {
   CollapsibleSection,
@@ -90,9 +95,9 @@ function DateConflicts({
     >
       <p className="font-semibold">{label}</p>
       <ul className="mt-1 flex flex-col gap-1">
-        {conflicts.map((conflict) => (
+        {conflicts.map((conflict, index) => (
           <li
-            key={conflict.value}
+            key={dateConflictItemKey(conflict.value, index)}
             className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
           >
             <RecordValue value={conflict.value} />
@@ -162,9 +167,9 @@ export function HospitalizationSection({
                 {clinicalRecord.diagnoses}
               </h3>
               <ul className="flex list-none flex-col gap-1">
-                {diagnoses.map((diagnosis) => (
+                {diagnoses.map((diagnosis, index) => (
                   <li
-                    key={diagnosis.value}
+                    key={diagnosisItemKey(diagnosis.value, index)}
                     className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                   >
                     <RecordValue value={diagnosis.value} />
@@ -289,9 +294,9 @@ export function HistorySection({
                   {group.label}
                 </h3>
                 <ul className="flex list-none flex-col gap-1">
-                  {group.entries.map((entry) => (
+                  {group.entries.map((entry, index) => (
                     <li
-                      key={`${group.label}-${entry.value}`}
+                      key={historyEntryItemKey(group.label, entry.value, index)}
                       className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
                     >
                       <RecordValue value={entry.value} />
@@ -444,9 +449,9 @@ export function StudiesSection({
         <RecordEmpty />
       ) : (
         <ul className="flex list-none flex-col gap-2">
-          {studies.map((study) => (
+          {studies.map((study, index) => (
             <RecordItem
-              key={study.type.value}
+              key={studyItemKey(study, index)}
               documentId={documentId}
               title={displayValue(study.type.value)}
               fields={[
@@ -502,9 +507,9 @@ export function MicrobiologySection({
         <RecordEmpty />
       ) : (
         <ul className="flex list-none flex-col gap-2">
-          {microbiology.map((result) => (
+          {microbiology.map((result, index) => (
             <RecordItem
-              key={result.organism?.value ?? result.sample?.value ?? "micro"}
+              key={microbiologyItemKey(result, index)}
               documentId={documentId}
               title={displayValue(
                 result.organism?.value ?? result.sample?.value,
