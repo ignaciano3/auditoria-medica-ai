@@ -43,6 +43,12 @@ export {
   studySchema,
 } from "./clinical-record.ts";
 export {
+  compareNormalizedDates,
+  hospitalizationDurationDays,
+  type NormalizedDate,
+  normalizeDate,
+} from "./dates.ts";
+export {
   type Document,
   type DocumentPage,
   type DocumentStatus,
