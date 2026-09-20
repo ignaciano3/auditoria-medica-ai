@@ -37,6 +37,21 @@ describe("normalizeDate", () => {
     });
   });
 
+  test("rejects a bare dd/mm that is impossible in the reference year", () => {
+    expect(normalizeDate("29/02", { referenceYear: 2026 })).toEqual({
+      original: "29/02",
+      hasYear: false,
+    });
+  });
+
+  test("accepts a bare dd/mm that is valid in a leap reference year", () => {
+    expect(normalizeDate("29/02", { referenceYear: 2024 })).toEqual({
+      original: "29/02",
+      iso: "2024-02-29",
+      hasYear: false,
+    });
+  });
+
   test("parses yyyy-mm-dd", () => {
     expect(normalizeDate("2026-02-13")).toEqual({
       original: "2026-02-13",

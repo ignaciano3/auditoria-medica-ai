@@ -66,11 +66,14 @@ export function normalizeDate(
   if (shortMatch !== null) {
     const day = Number(shortMatch[1]);
     const month = Number(shortMatch[2]);
-    if (!isValidYmd(2000, month, day)) {
-      return { original, hasYear: false };
-    }
     const referenceYear = context?.referenceYear;
     if (referenceYear === undefined) {
+      if (!isValidYmd(2000, month, day)) {
+        return { original, hasYear: false };
+      }
+      return { original, hasYear: false };
+    }
+    if (!isValidYmd(referenceYear, month, day)) {
       return { original, hasYear: false };
     }
     return {
