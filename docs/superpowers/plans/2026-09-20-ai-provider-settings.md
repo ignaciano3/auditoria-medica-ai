@@ -926,12 +926,12 @@ import { eq } from "drizzle-orm";
 import type { Database } from "../client.ts";
 import { appSettings } from "../schema.ts";
 
-const COLUMNS: Record<keyof StoredProviderSettings["encryptedKeys"], string> = {
+const COLUMNS = {
   openai: "openaiApiKeyEnc",
   deepseek: "deepseekApiKeyEnc",
-  dashscope: "dashscopeApiKeyEnc",
+  qwen: "dashscopeApiKeyEnc",
   opencode: "opencodeApiKeyEnc",
-};
+} as const satisfies Record<ProviderKey, string>;
 
 export function createAppSettingsRepository(db: Database) {
   return {
@@ -949,7 +949,7 @@ export function createAppSettingsRepository(db: Database) {
         encryptedKeys: {
           openai: row.openaiApiKeyEnc ?? undefined,
           deepseek: row.deepseekApiKeyEnc ?? undefined,
-          dashscope: row.dashscopeApiKeyEnc ?? undefined,
+          qwen: row.dashscopeApiKeyEnc ?? undefined,
           opencode: row.opencodeApiKeyEnc ?? undefined,
         },
       };
@@ -994,7 +994,7 @@ export function createAppSettingsRepository(db: Database) {
 }
 ```
 
-TypeScript will reject indexing `COLUMNS` with `keyof ...` because the stored keys type is `Partial<Record<ProviderKey, ...>>`; `keyof Partial<Record<ProviderKey, X>>` is still `ProviderKey`. If the compiler complains, annotate `COLUMNS` as `Record<ProviderKey, string>` and keep the loop over `AI_PROVIDER_KEYS` imported from `@audit/domain`.
+`COLUMNS` maps the domain `ProviderKey` `qwen` to the column `dashscopeApiKeyEnc` (named after `DASHSCOPE_API_KEY`). The `as const satisfies Record<ProviderKey, string>` annotation keeps `keyof` aligned with the domain type and lets the loop index it safely.
 
 - [ ] **Step 6: Export from the db index**
 
@@ -1678,6 +1678,7 @@ Create `apps/worker/src/settings.test.ts`:
 
 ```ts
 import { describe, expect, test } from "bun:test";
+import type { StoredProviderSettings } from "@audit/domain";
 import type { Env } from "@audit/lib";
 import {
   createSettingsCache,
@@ -1705,9 +1706,7 @@ function makeEnv(): Env {
   };
 }
 
-function makeDeps(
-  stored: SettingsDeps["repo"] extends { get(): Promise<infer R> } ? R : never,
-): SettingsDeps {
+function makeDeps(stored: StoredProviderSettings | null): SettingsDeps {
   return {
     repo: { get: async () => stored },
     env: makeEnv(),
