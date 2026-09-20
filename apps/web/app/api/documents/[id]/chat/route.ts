@@ -3,12 +3,12 @@ import { getEnv, ui } from "@audit/lib";
 import { NextResponse } from "next/server";
 import {
   type ChatDeps,
+  MAX_QUESTION_LENGTH,
   prepareChat,
   streamReply,
 } from "../../../../../lib/chat-service.ts";
 import { getContainer } from "../../../../../lib/container.ts";
-
-const MAX_QUESTION_LENGTH = 2000;
+import { serializeChatMessage } from "../../../../../lib/serialize-chat-message.ts";
 
 export function parseChatBody(body: unknown): string | null {
   if (body === null || typeof body !== "object") return null;
@@ -59,9 +59,11 @@ export async function POST(
   }
 
   const encoder = new TextEncoder();
+  let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (payload: unknown) => {
+        if (cancelled) return;
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
         );
@@ -70,8 +72,9 @@ export async function POST(
         const iterator = streamReply(deps, prepared.context);
         while (true) {
           const { value, done } = await iterator.next();
+          if (cancelled) break;
           if (done) {
-            send({ done: true, message: value });
+            send({ done: true, message: serializeChatMessage(value) });
             break;
           }
           send({ delta: value });
@@ -79,8 +82,15 @@ export async function POST(
       } catch {
         send({ error: ui.chatError });
       } finally {
-        controller.close();
+        if (!cancelled) {
+          try {
+            controller.close();
+          } catch {}
+        }
       }
+    },
+    cancel() {
+      cancelled = true;
     },
   });
 

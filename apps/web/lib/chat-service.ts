@@ -10,7 +10,7 @@ import type { ChatMessageRow, ClinicalRecordWithFindings } from "@audit/db";
 import type { DocumentPage, DocumentStatus } from "@audit/domain";
 import { errors, ui } from "@audit/lib";
 
-const MAX_QUESTION_LENGTH = 2000;
+export const MAX_QUESTION_LENGTH = 2000;
 const MAX_HISTORY_TURNS = 10;
 
 export type ChatDeps = {

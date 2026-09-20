@@ -63,6 +63,7 @@ export function ChatPanel({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let sawDone = false;
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -82,6 +83,7 @@ export function ChatPanel({
                 ),
               );
             } else if ("done" in payload) {
+              sawDone = true;
               setMessages((prev) =>
                 prev.map((message) =>
                   message.id === assistantId ? payload.message : message,
@@ -92,6 +94,7 @@ export function ChatPanel({
             }
           }
         }
+        if (!sawDone) throw new Error(ui.chatError);
       } catch {
         setError(ui.chatError);
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
