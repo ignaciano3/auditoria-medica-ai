@@ -89,6 +89,7 @@ export class OpenAIProvider implements LLMProvider {
   private readonly baseURL: string | undefined;
   private readonly extraBody: Record<string, unknown> | undefined;
   private readonly reasoningEffort: string | null;
+  private readonly defaultHeaders: Record<string, string> | undefined;
   private readonly injectedClient: OpenAICompatibleClient | undefined;
   private cachedClient: OpenAICompatibleClient | undefined;
 
@@ -99,6 +100,7 @@ export class OpenAIProvider implements LLMProvider {
     baseURL?: string;
     extraBody?: Record<string, unknown>;
     reasoningEffort?: string | null;
+    defaultHeaders?: Record<string, string>;
   }) {
     this.model = options.model;
     this.apiKey = options.apiKey;
@@ -107,6 +109,7 @@ export class OpenAIProvider implements LLMProvider {
     this.injectedClient = options.client;
     this.reasoningEffort =
       options.reasoningEffort === undefined ? "low" : options.reasoningEffort;
+    this.defaultHeaders = options.defaultHeaders;
   }
 
   private get client(): OpenAICompatibleClient {
@@ -116,6 +119,9 @@ export class OpenAIProvider implements LLMProvider {
         (new OpenAI({
           apiKey: this.apiKey,
           ...(this.baseURL ? { baseURL: this.baseURL } : {}),
+          ...(this.defaultHeaders
+            ? { defaultHeaders: this.defaultHeaders }
+            : {}),
         }) as unknown as OpenAICompatibleClient);
     }
     return this.cachedClient;
