@@ -13,6 +13,35 @@ export type ClassifyPagesHooks = {
   onPageError?(pageNumber: number, error: unknown): void;
 };
 
+export async function classifyPage(
+  page: PageImage,
+  provider: OCRProvider,
+  hooks: ClassifyPagesHooks = {},
+): Promise<DocumentPage> {
+  try {
+    const classification = await provider.classifyPage(page);
+    hooks.onPageClassified?.(page.pageNumber, classification);
+    return {
+      pageNumber: page.pageNumber,
+      text: "",
+      docType: classification.docType,
+      handwritten: classification.handwritten,
+      dataBearing: classification.dataBearing,
+      status: "pending",
+    };
+  } catch (error) {
+    hooks.onPageError?.(page.pageNumber, error);
+    return {
+      pageNumber: page.pageNumber,
+      text: "",
+      docType: "other",
+      handwritten: false,
+      dataBearing: true,
+      status: "pending",
+    };
+  }
+}
+
 export async function classifyPages(
   pages: PageImage[],
   provider: OCRProvider,
@@ -20,28 +49,7 @@ export async function classifyPages(
 ): Promise<DocumentPage[]> {
   const results: DocumentPage[] = [];
   for (const page of pages) {
-    try {
-      const classification = await provider.classifyPage(page);
-      hooks.onPageClassified?.(page.pageNumber, classification);
-      results.push({
-        pageNumber: page.pageNumber,
-        text: "",
-        docType: classification.docType,
-        handwritten: classification.handwritten,
-        dataBearing: classification.dataBearing,
-        status: "pending",
-      });
-    } catch (error) {
-      hooks.onPageError?.(page.pageNumber, error);
-      results.push({
-        pageNumber: page.pageNumber,
-        text: "",
-        docType: "other",
-        handwritten: false,
-        dataBearing: true,
-        status: "pending",
-      });
-    }
+    results.push(await classifyPage(page, provider, hooks));
   }
   return results;
 }

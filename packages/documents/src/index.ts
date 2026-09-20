@@ -1,4 +1,7 @@
-export { classifyPages } from "./classification/classify-pages.ts";
+export {
+  classifyPage,
+  classifyPages,
+} from "./classification/classify-pages.ts";
 export {
   createOcrProviders,
   OcrProviderKeyError,

@@ -1,7 +1,7 @@
 import type { LLMProvider } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import {
-  classifyPages,
+  classifyPage,
   type OCRProvider,
   renderPdfPages,
 } from "@audit/documents";
@@ -139,28 +139,50 @@ async function processAllPages(
   deps: ProcessDocumentDeps,
   logger: ProcessingLogger,
   documentId: string,
-  classified: DocumentPage[],
   rendered: RenderedPage[],
 ): Promise<DocumentPage[]> {
-  const pngByPage = new Map(
-    rendered.map((page) => [page.pageNumber, page.png]),
-  );
   const processedPages: DocumentPage[] = [];
 
-  for (const page of classified) {
+  for (const page of rendered) {
     const key = pageImageKey(documentId, page.pageNumber);
-    const png = pngByPage.get(page.pageNumber);
-    if (!png) throw new Error("Missing rendered page");
+    const { pageNumber, png } = page;
     await deps.storage.put(key, png, "image/png");
+    const classified = await classifyPage({ pageNumber, png }, deps.ocr, {
+      onPageClassified: (classifiedPage, classification) => {
+        logger.info({
+          event: "page_classified",
+          documentId,
+          pageNumber: classifiedPage,
+          docType: classification.docType,
+          handwritten: classification.handwritten,
+          dataBearing: classification.dataBearing,
+        });
+      },
+      onPageError: (failedPage, error) => {
+        logger.error({
+          event: "page_classification_failed",
+          documentId,
+          pageNumber: failedPage,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      },
+    });
     let resolved: DocumentPage;
     try {
-      resolved = await resolvePage(deps, logger, documentId, page, png, key);
+      resolved = await resolvePage(
+        deps,
+        logger,
+        documentId,
+        classified,
+        png,
+        key,
+      );
     } catch {
-      resolved = { ...page, imageKey: key, status: "failed" };
+      resolved = { ...classified, imageKey: key, status: "failed" };
       logger.error({
         event: "page_failed",
         documentId,
-        pageNumber: page.pageNumber,
+        pageNumber,
       });
     }
     processedPages.push(resolved);
@@ -198,31 +220,10 @@ export function createProcessDocument(
         documentId,
         pageCount: rendered.length,
       });
-      const classified = await classifyPages(rendered, deps.ocr, {
-        onPageClassified: (pageNumber, classification) => {
-          logger.info({
-            event: "page_classified",
-            documentId,
-            pageNumber,
-            docType: classification.docType,
-            handwritten: classification.handwritten,
-            dataBearing: classification.dataBearing,
-          });
-        },
-        onPageError: (pageNumber, error) => {
-          logger.error({
-            event: "page_classification_failed",
-            documentId,
-            pageNumber,
-            message: error instanceof Error ? error.message : String(error),
-          });
-        },
-      });
       const processedPages = await processAllPages(
         deps,
         logger,
         documentId,
-        classified,
         rendered,
       );
 

@@ -125,6 +125,7 @@ function makeDeps(options: {
   const ops: Array<
     | { type: "status"; status: DocumentStatus }
     | { type: "clear" }
+    | { type: "classify"; pageNumber: number }
     | { type: "savePage"; pageNumber: number }
   > = [];
   const infoEvents: Array<Record<string, unknown>> = [];
@@ -204,7 +205,12 @@ function makeDeps(options: {
     },
     render: options.render ?? defaultRender,
     ocr: {
-      classifyPage: options.classifyPage ?? (() => Promise.resolve(evolution)),
+      classifyPage: (input) => {
+        ops.push({ type: "classify", pageNumber: input.pageNumber });
+        return (options.classifyPage ?? (() => Promise.resolve(evolution)))(
+          input,
+        );
+      },
       transcribePage:
         options.transcribePage ?? (() => Promise.resolve("texto")),
     },
@@ -304,6 +310,23 @@ describe("createProcessDocument", () => {
     expect(saveIndexes).toHaveLength(2);
     expect(extractingIndex).toBeGreaterThan(-1);
     expect(Math.max(...saveIndexes)).toBeLessThan(extractingIndex);
+  });
+
+  test("saves page one before classifying page two", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const firstSave = deps.ops.findIndex(
+      (op) => op.type === "savePage" && op.pageNumber === 1,
+    );
+    const secondClassify = deps.ops.findIndex(
+      (op) => op.type === "classify" && op.pageNumber === 2,
+    );
+
+    expect(firstSave).toBeGreaterThan(-1);
+    expect(secondClassify).toBeGreaterThan(-1);
+    expect(firstSave).toBeLessThan(secondClassify);
   });
 
   test("clears stale pages before saving the new run", async () => {
