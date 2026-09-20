@@ -5,6 +5,7 @@ import {
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
+  processedPageCount,
 } from "./pdf-viewer-utils.ts";
 
 function page(
@@ -27,6 +28,23 @@ describe("clampPage", () => {
 describe("pageIndicator", () => {
   test("formats the Spanish page indicator", () => {
     expect(pageIndicator(2, 7)).toBe("Página 2 de 7");
+  });
+});
+
+describe("processedPageCount", () => {
+  test("counts pages that are no longer pending", () => {
+    expect(
+      processedPageCount([
+        page({ status: "vision" }),
+        page({ pageNumber: 2, status: "skipped" }),
+        page({ pageNumber: 3, status: "failed" }),
+        page({ pageNumber: 4, status: "pending" }),
+      ]),
+    ).toBe(3);
+  });
+
+  test("returns 0 when there are no pages", () => {
+    expect(processedPageCount([])).toBe(0);
   });
 });
 

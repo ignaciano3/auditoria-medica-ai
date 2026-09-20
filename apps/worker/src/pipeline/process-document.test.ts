@@ -118,9 +118,15 @@ function makeDeps(options: {
   extractErrorCall?: number;
 }) {
   const updates: Update[] = [];
-  const saved: DocumentPage[][] = [];
+  const savedPages: DocumentPage[] = [];
+  const cleared: string[] = [];
   const storedKeys: string[] = [];
   const pageCounts: number[] = [];
+  const ops: Array<
+    | { type: "status"; status: DocumentStatus }
+    | { type: "clear" }
+    | { type: "savePage"; pageNumber: number }
+  > = [];
   const infoEvents: Array<Record<string, unknown>> = [];
   const errorEvents: Array<Record<string, unknown>> = [];
   const upserted: Upserted[] = [];
@@ -168,6 +174,7 @@ function makeDeps(options: {
         }),
       updateStatus: (_id, status, error) => {
         updates.push({ status, error: error ?? null });
+        ops.push({ type: "status", status });
         return Promise.resolve();
       },
       setPageCount: (_id, pageCount) => {
@@ -176,8 +183,14 @@ function makeDeps(options: {
       },
     },
     pages: {
-      replaceForDocument: (_id, pages) => {
-        saved.push(pages);
+      clearForDocument: (id) => {
+        cleared.push(id);
+        ops.push({ type: "clear" });
+        return Promise.resolve();
+      },
+      savePage: (_id, page) => {
+        savedPages.push(page);
+        ops.push({ type: "savePage", pageNumber: page.pageNumber });
         return Promise.resolve();
       },
     },
@@ -221,7 +234,9 @@ function makeDeps(options: {
   return {
     processDocument,
     updates,
-    saved,
+    savedPages,
+    cleared,
+    ops,
     storedKeys,
     pageCounts,
     infoEvents,
@@ -248,14 +263,15 @@ describe("createProcessDocument", () => {
     const statuses = deps.updates.map((update) => update.status);
     expect(statuses).toEqual(["processing", "extracting", "ready"]);
     expect(deps.pageCounts).toEqual([2]);
-    expect(deps.saved).toHaveLength(1);
+    expect(deps.savedPages).toHaveLength(2);
+    expect(deps.cleared).toEqual(["d1"]);
 
     expect(deps.storedKeys).toEqual([
       "documents/d1/pages/1.png",
       "documents/d1/pages/2.png",
     ]);
 
-    const pages = deps.saved[0] ?? [];
+    const pages = deps.savedPages;
     expect(pages).toHaveLength(2);
 
     expect(pages[0]).toMatchObject({
@@ -271,6 +287,34 @@ describe("createProcessDocument", () => {
       skipReason: processing.flowsheetSkipped,
       imageKey: "documents/d1/pages/2.png",
     });
+  });
+
+  test("persists each page as it finishes, before extraction starts", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const saveIndexes = deps.ops
+      .map((op, index) => (op.type === "savePage" ? index : -1))
+      .filter((index) => index >= 0);
+    const extractingIndex = deps.ops.findIndex(
+      (op) => op.type === "status" && op.status === "extracting",
+    );
+
+    expect(saveIndexes).toHaveLength(2);
+    expect(extractingIndex).toBeGreaterThan(-1);
+    expect(Math.max(...saveIndexes)).toBeLessThan(extractingIndex);
+  });
+
+  test("clears stale pages before saving the new run", async () => {
+    const deps = makeDeps({});
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.cleared).toEqual(["d1"]);
+    const clearIndex = deps.ops.findIndex((op) => op.type === "clear");
+    const firstSaveIndex = deps.ops.findIndex((op) => op.type === "savePage");
+    expect(clearIndex).toBeLessThan(firstSaveIndex);
   });
 
   test("persists the reduced record, stamps provenance, and marks ready", async () => {
@@ -361,7 +405,7 @@ describe("createProcessDocument", () => {
 
     await deps.processDocument({ documentId: "d1" });
 
-    const pages = deps.saved[0] ?? [];
+    const pages = deps.savedPages;
     expect(pages[0]?.status).toBe("skipped");
     expect(pages[0]?.skipReason).toBe(processing.notDataBearing);
     expect(pages[1]?.status).toBe("skipped");
@@ -413,7 +457,7 @@ describe("createProcessDocument", () => {
 
     await deps.processDocument({ documentId: "d1" });
 
-    const pages = deps.saved[0] ?? [];
+    const pages = deps.savedPages;
     expect(pages[0]?.status).toBe("failed");
     expect(pages[0]?.imageKey).toBe("documents/d1/pages/1.png");
     expect(pages[1]?.status).toBe("vision");
@@ -471,7 +515,7 @@ describe("createProcessDocument", () => {
     const last = deps.updates.at(-1);
     expect(last?.status).toBe("error");
     expect(last?.error).toBe(errors.processingFailed);
-    expect(deps.saved).toHaveLength(0);
+    expect(deps.savedPages).toHaveLength(0);
   });
 
   test("marks the document as error and rethrows when download fails", async () => {
@@ -487,7 +531,7 @@ describe("createProcessDocument", () => {
     const last = deps.updates.at(-1);
     expect(last?.status).toBe("error");
     expect(last?.error).toBe(errors.processingFailed);
-    expect(deps.saved).toHaveLength(0);
+    expect(deps.savedPages).toHaveLength(0);
   });
 
   test("marks the document as error and rethrows when storing a page fails", async () => {
@@ -503,7 +547,7 @@ describe("createProcessDocument", () => {
     const last = deps.updates.at(-1);
     expect(last?.status).toBe("error");
     expect(last?.error).toBe(errors.processingFailed);
-    expect(deps.saved).toHaveLength(0);
+    expect(deps.savedPages).toHaveLength(0);
   });
 
   test("assigns stable content-derived finding ids across runs", async () => {
@@ -571,7 +615,7 @@ describe("createProcessDocument", () => {
 
     await deps.processDocument({ documentId: "d1" });
 
-    const pages = deps.saved[0] ?? [];
+    const pages = deps.savedPages;
     expect(pages[0]?.text).toBe("manuscrito");
     expect(pages[1]?.text).toBe("printed");
   });
@@ -589,7 +633,7 @@ describe("createProcessDocument", () => {
 
     await deps.processDocument({ documentId: "d1" });
 
-    const pages = deps.saved[0] ?? [];
+    const pages = deps.savedPages;
     expect(pages.map((page) => page.text)).toEqual(["tesseract", "tesseract"]);
   });
 

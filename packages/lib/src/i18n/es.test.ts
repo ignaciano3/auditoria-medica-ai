@@ -7,6 +7,7 @@ import {
   failedChunksIndicator,
   failedPagesIndicator,
   medicationStatusLabels,
+  pageProgress,
   settings,
   settingsMissingKey,
   ui,
@@ -97,6 +98,10 @@ describe("clinicalRecord full-view labels", () => {
 describe("ui viewer and chat labels", () => {
   test("labels the image tab", () => {
     expect(ui.image).toBe("Imagen");
+  });
+
+  test("formats the transcription progress", () => {
+    expect(pageProgress(3, 24)).toBe("3 de 24 páginas transcritas");
   });
 
   test("labels the chat input and send action", () => {

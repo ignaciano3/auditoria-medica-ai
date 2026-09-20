@@ -1,10 +1,17 @@
 "use client";
 
-import type { PageStatus } from "@audit/domain";
-import { pageImageAlt, pageIndicator, ui } from "@audit/lib/i18n";
+import type { DocumentStatus, PageStatus } from "@audit/domain";
+import {
+  pageImageAlt,
+  pageIndicator,
+  pageProgress,
+  processing,
+  ui,
+} from "@audit/lib/i18n";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { redoPageTranscription } from "../lib/actions.ts";
+import { pollIntervalMs } from "./document-status.ts";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -17,6 +24,7 @@ import {
   clampPage,
   type PageTranscriptInput,
   pageTranscript,
+  processedPageCount,
   viewerAnchorId,
 } from "./pdf-viewer-utils.ts";
 import { Button } from "./ui/button.tsx";
@@ -38,11 +46,13 @@ type RedoState = {
 
 export function PdfViewer({
   documentId,
+  status,
   pageCount,
   initialPage,
   pages,
 }: {
   documentId: string;
+  status: DocumentStatus;
   pageCount: number;
   initialPage: number;
   pages: PageTranscriptInput[];
@@ -68,6 +78,8 @@ export function PdfViewer({
   const transcript = pageTranscript(pageInput);
   const canRedo = canRedoTranscription(pageInput);
   const redoActive = redo !== null;
+  const pollMs = pollIntervalMs(status);
+  const processedPages = processedPageCount(pages);
 
   useEffect(() => {
     if (redo === null) return;
@@ -90,6 +102,12 @@ export function PdfViewer({
       clearTimeout(timeout);
     };
   }, [redoActive, router]);
+
+  useEffect(() => {
+    if (pollMs === null) return;
+    const timer = setInterval(() => router.refresh(), pollMs);
+    return () => clearInterval(timer);
+  }, [pollMs, router]);
 
   function goToPage(next: number) {
     setPage(clampPage(next, pageCount));
@@ -133,6 +151,11 @@ export function PdfViewer({
           </TabButton>
         </div>
         <div className="ml-auto flex items-center gap-1">
+          {pollMs !== null ? (
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              {pageProgress(processedPages, pageCount)}
+            </span>
+          ) : null}
           {tab === "transcription" ? (
             canRedo ? (
               <Button
@@ -184,13 +207,19 @@ export function PdfViewer({
 
       {tab === "image" ? (
         <div className="min-h-0 flex-1 overflow-auto bg-muted/40 p-3">
-          {/* biome-ignore lint/performance/noImgElement: PDF page render with dynamic zoom/scroll */}
-          <img
-            className="mx-auto block h-auto max-w-none rounded-md shadow-sm"
-            src={`/api/documents/${documentId}/pages/${currentPage}`}
-            alt={pageImageAlt(currentPage)}
-            style={{ width: `${zoom * 100}%` }}
-          />
+          {pageInput?.imageKey !== undefined ? (
+            // biome-ignore lint/performance/noImgElement: PDF page render with dynamic zoom/scroll
+            <img
+              className="mx-auto block h-auto max-w-none rounded-md shadow-sm"
+              src={`/api/documents/${documentId}/pages/${currentPage}`}
+              alt={pageImageAlt(currentPage)}
+              style={{ width: `${zoom * 100}%` }}
+            />
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">
+              {processing.pending}
+            </p>
+          )}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto p-4">

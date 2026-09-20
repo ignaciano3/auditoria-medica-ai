@@ -65,6 +65,10 @@ export function pageImageAlt(page: number): string {
   return `Página ${page} del documento`;
 }
 
+export function pageProgress(processed: number, total: number): string {
+  return `${processed} de ${total} páginas transcritas`;
+}
+
 export function failedPagesIndicator(pages: number[]): string {
   return `Páginas con error: ${pages.join(", ")}`;
 }
