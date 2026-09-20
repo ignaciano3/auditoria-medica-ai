@@ -1,7 +1,6 @@
-import type { AuditSummary, Finding } from "@audit/domain";
+import type { AuditSummary } from "@audit/domain";
 import { clinicalRecord, summary as summaryLabels } from "@audit/lib/i18n";
 import { sourcePages } from "../lib/clinical-record-view.ts";
-import { sortFindings } from "../lib/findings-view.ts";
 import { durationText } from "../lib/summary-view.ts";
 import { describeEntry } from "../lib/timeline-view.ts";
 import {
@@ -10,45 +9,6 @@ import {
   RecordFields,
 } from "./clinical-record-primitives.tsx";
 import { EvidenceLinks } from "./evidence-link.tsx";
-
-function FindingList({
-  documentId,
-  items,
-}: {
-  documentId: string;
-  items: Finding[];
-}) {
-  if (items.length === 0) return <RecordEmpty />;
-
-  return (
-    <ul className="flex list-none flex-col gap-2">
-      {sortFindings(items).map((finding) => (
-        <li
-          key={finding.id}
-          className="rounded-lg border border-border bg-muted/30 p-3"
-        >
-          <p className="font-semibold [overflow-wrap:anywhere]">
-            {finding.title}
-          </p>
-          <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-            {finding.explanation}
-          </p>
-          <p className="mt-1 text-xs font-medium text-muted-foreground">
-            {summaryLabels.requiresHumanReview}
-          </p>
-          <div className="mt-2">
-            <EvidenceLinks
-              documentId={documentId}
-              pages={sourcePages(
-                finding.evidence.map((evidence) => evidence.source),
-              )}
-            />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 export function AuditSummaryView({
   documentId,
@@ -72,6 +32,16 @@ export function AuditSummaryView({
               label: clinicalRecord.reason,
               value: summary.reason?.value,
               sources: summary.reason?.sources ?? [],
+            },
+            {
+              label: summaryLabels.inconsistencies,
+              value: summary.inconsistencies.length,
+              sources: [],
+            },
+            {
+              label: summaryLabels.documentationGaps,
+              value: summary.documentationGaps.length,
+              sources: [],
             },
           ]}
         />
@@ -126,23 +96,6 @@ export function AuditSummaryView({
             ))}
           </ul>
         )}
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={summaryLabels.inconsistencies}
-        count={summary.inconsistencies.length}
-      >
-        <FindingList documentId={documentId} items={summary.inconsistencies} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={summaryLabels.documentationGaps}
-        count={summary.documentationGaps.length}
-      >
-        <FindingList
-          documentId={documentId}
-          items={summary.documentationGaps}
-        />
       </CollapsibleSection>
 
       <CollapsibleSection title={summaryLabels.aiInterpretation}>
