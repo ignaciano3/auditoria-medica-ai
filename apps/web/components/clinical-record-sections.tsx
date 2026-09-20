@@ -67,7 +67,7 @@ export function PatientSection({
   ];
 
   return (
-    <CollapsibleSection title={clinicalRecord.patient} defaultOpen>
+    <CollapsibleSection title={clinicalRecord.patient}>
       {fields.some((field) => hasValue(field.value)) ? (
         <RecordFields documentId={documentId} fields={fields} />
       ) : (
@@ -157,7 +157,7 @@ export function HospitalizationSection({
     fields.some((field) => hasValue(field.value)) || diagnoses.length > 0;
 
   return (
-    <CollapsibleSection title={clinicalRecord.hospitalization} defaultOpen>
+    <CollapsibleSection title={clinicalRecord.hospitalization}>
       {hasAny ? (
         <div className="flex flex-col gap-3">
           <RecordFields documentId={documentId} fields={fields} />
@@ -284,7 +284,7 @@ export function HistorySection({
     history.usualMedications.length > 0;
 
   return (
-    <CollapsibleSection title={clinicalRecord.history} defaultOpen>
+    <CollapsibleSection title={clinicalRecord.history}>
       {hasAny ? (
         <div className="flex flex-col gap-3">
           {groups.map((group) =>
@@ -591,7 +591,7 @@ export function DischargeSection({
   ];
 
   return (
-    <CollapsibleSection title={clinicalRecord.discharge} defaultOpen>
+    <CollapsibleSection title={clinicalRecord.discharge}>
       {fields.some((field) => hasValue(field.value)) ? (
         <RecordFields documentId={documentId} fields={fields} />
       ) : (

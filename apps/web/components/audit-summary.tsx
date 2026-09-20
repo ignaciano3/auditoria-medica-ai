@@ -59,7 +59,7 @@ export function AuditSummaryView({
 }) {
   return (
     <section className="flex flex-col gap-6">
-      <CollapsibleSection title={summaryLabels.auditTitle} defaultOpen>
+      <CollapsibleSection title={summaryLabels.auditTitle}>
         <RecordFields
           documentId={documentId}
           fields={[
@@ -83,7 +83,6 @@ export function AuditSummaryView({
       <CollapsibleSection
         title={summaryLabels.documentedFacts}
         count={summary.majorEvents.length}
-        defaultOpen
       >
         {summary.majorEvents.length === 0 ? (
           <RecordEmpty />
@@ -132,7 +131,6 @@ export function AuditSummaryView({
       <CollapsibleSection
         title={summaryLabels.inconsistencies}
         count={summary.inconsistencies.length}
-        defaultOpen
       >
         <FindingList documentId={documentId} items={summary.inconsistencies} />
       </CollapsibleSection>
@@ -140,7 +138,6 @@ export function AuditSummaryView({
       <CollapsibleSection
         title={summaryLabels.documentationGaps}
         count={summary.documentationGaps.length}
-        defaultOpen
       >
         <FindingList
           documentId={documentId}

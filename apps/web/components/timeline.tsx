@@ -18,7 +18,7 @@ export function Timeline({
   );
 
   return (
-    <Section title={ui.timeline} count={count} defaultOpen>
+    <Section title={ui.timeline} count={count}>
       {count === 0 ? (
         <p className="text-sm text-muted-foreground">{timelineLabels.empty}</p>
       ) : (

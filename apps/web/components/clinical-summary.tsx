@@ -93,7 +93,7 @@ export function ClinicalSummaryView({
   ];
 
   return (
-    <CollapsibleSection title={ui.summary} defaultOpen>
+    <CollapsibleSection title={ui.summary}>
       <RecordFields documentId={documentId} fields={fields} />
       {summary.diagnoses.length > 0 ? (
         <div className="flex flex-col gap-1">
