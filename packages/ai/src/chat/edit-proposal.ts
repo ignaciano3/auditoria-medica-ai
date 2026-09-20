@@ -88,7 +88,7 @@ export function replaceLiteral(
   const pattern = new RegExp(escapeRegExp(incorrect), "gi");
   const occurrences = text.match(pattern)?.length ?? 0;
   if (occurrences === 0) return { text, occurrences: 0 };
-  return { text: text.replace(pattern, correct), occurrences };
+  return { text: text.replace(pattern, () => correct), occurrences };
 }
 
 export function replaceLiteralDeep(

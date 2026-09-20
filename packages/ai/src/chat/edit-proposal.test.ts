@@ -78,6 +78,13 @@ describe("escapeRegExp / replaceLiteral", () => {
       occurrences: 0,
     });
   });
+
+  test("inserts dollar sequences in the replacement literally", () => {
+    expect(replaceLiteral("Ansel", "Ansel", "Sr. $& $$")).toEqual({
+      text: "Sr. $& $$",
+      occurrences: 1,
+    });
+  });
 });
 
 describe("replaceLiteralDeep", () => {
