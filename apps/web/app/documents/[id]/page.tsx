@@ -1,11 +1,18 @@
 import type { ClinicalRecordWithFindings, FindingReview } from "@audit/db";
+import {
+  buildAuditSummary,
+  buildClinicalSummary,
+  buildTimeline,
+} from "@audit/domain";
 import { ui } from "@audit/lib/i18n";
 import { io } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { AuditSummaryView } from "../../../components/audit-summary.tsx";
 import { ChatPanel } from "../../../components/chat-panel.tsx";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
+import { ClinicalSummaryView } from "../../../components/clinical-summary.tsx";
 import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
 import { FindingsSection } from "../../../components/findings-section.tsx";
@@ -13,6 +20,7 @@ import { ArrowLeftIcon, SpinnerIcon } from "../../../components/icons.tsx";
 import { PdfViewer } from "../../../components/pdf-viewer.tsx";
 import { ReExtractButton } from "../../../components/re-extract-button.tsx";
 import { DetailSkeleton } from "../../../components/skeletons.tsx";
+import { Timeline } from "../../../components/timeline.tsx";
 import { buttonVariants } from "../../../components/ui/button.tsx";
 import { Callout } from "../../../components/ui/callout.tsx";
 import { getClinicalData } from "../../../lib/cached-data.ts";
@@ -80,6 +88,15 @@ async function DocumentContent({
     .map((page) => page.pageNumber);
   const pageCount = doc.pageCount;
 
+  const timelineGroups =
+    clinical !== null ? buildTimeline(clinical.record) : [];
+  const clinicalSummary =
+    clinical !== null ? buildClinicalSummary(clinical.record) : null;
+  const auditSummary =
+    clinical !== null
+      ? buildAuditSummary(clinical.record, clinical.findings)
+      : null;
+
   const pageParam = Array.isArray(query.page) ? query.page[0] : query.page;
   const parsedPage = Number.parseInt(pageParam ?? "1", 10);
   const initialPage = Number.isFinite(parsedPage) ? parsedPage : 1;
@@ -106,6 +123,13 @@ async function DocumentContent({
         <Callout tone="danger" role="alert">
           <p>{doc.error}</p>
         </Callout>
+      ) : null}
+      {clinicalSummary !== null ? (
+        <ClinicalSummaryView documentId={doc.id} summary={clinicalSummary} />
+      ) : null}
+      <Timeline documentId={doc.id} groups={timelineGroups} />
+      {auditSummary !== null ? (
+        <AuditSummaryView documentId={doc.id} summary={auditSummary} />
       ) : null}
       {clinical !== null ? (
         <ClinicalRecordView
