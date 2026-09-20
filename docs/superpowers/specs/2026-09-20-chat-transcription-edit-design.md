@@ -4,8 +4,9 @@ Date: 2026-09-20
 Depends on: `docs/superpowers/specs/2026-09-20-document-chat-design.md`
 (document chat, `chat-service.ts`, SSE route, `chat_messages`)
 Status: Approved design (pre-implementation plan)
-Scope: Ask the chat, in natural language, to correct a page transcription; the
-page is edited but the record is **not** automatically re-extracted.
+Scope: Ask the chat, in natural language, to correct a page transcription. The
+edit is applied to the page text **and** propagated, as a literal replacement, to
+the persisted clinical record and findings — no re-extraction.
 
 ## 1. Purpose
 
@@ -17,8 +18,9 @@ confused.
 This feature lets the auditor fix the transcription from the chat:
 *"en la página 3 donde dice Ansel en realidad es Ariel"*. The chat interprets
 the message, proposes a **literal** replacement on a specific page, and only
-writes it after the auditor confirms. Re-running extraction stays a manual
-action (`ReExtractButton`).
+writes it after the auditor confirms. On confirmation the same literal is
+replaced in the page text, in the stored record and in the findings, so the
+"two patients" confusion disappears immediately without any LLM call.
 
 ## 2. Confirmed decisions
 
@@ -26,11 +28,12 @@ Decided with the project owner during brainstorming:
 
 | Question | Decision |
 |---|---|
-| What changes | **Only `document_pages.text`.** No automatic re-extraction; the auditor presses *Re-extraer* when ready. |
+| What changes | `document_pages.text` **and** the persisted `ClinicalRecord` + findings (deep literal replacement), plus the record index columns. The full *Re-extraer* button stays available for a complete rebuild. |
 | How the correction is expressed | **Natural language interpreted by the LLM**, with a structured proposal the user must **confirm** before any write. |
 | Intent detection | **An LLM triage call on every chat message** (variant A). Normal questions still get answered; corrections become proposals. |
-| Who writes | The LLM only proposes `incorrect → correct`; the server performs a **deterministic literal replacement**. The model never rewrites clinical text. |
-| Multiple matches | Replace **all** occurrences of the literal in the target page; the card shows the count. |
+| How the record is updated | **Literal propagation, no re-extraction.** Because the correction is a string swap, the server replaces it in the page and recursively in the record/findings. Instant and deterministic. |
+| Who writes | The LLM only proposes `incorrect → correct`; the server performs the **deterministic literal replacement**. The model never rewrites clinical text. |
+| Multiple matches | Replace **all** occurrences of the literal in the target page and in the record; the card shows the page count. |
 | Traceability | **None.** No original-text snapshot, no edited badge. Overwriting is permanent. |
 | Proposal persistence | The proposal is **ephemeral** (live SSE event only). An applied/cancelled/failed outcome is persisted as a normal assistant message. |
 | Local heuristic mode | The triage always returns `question`; the feature is effectively unavailable without a real LLM. |
@@ -48,7 +51,7 @@ ChatPanel (client) ── POST {message} ──► /api/documents/[id]/chat (rou
                         ▼                                           ▼
                  kind === "question"                        kind === "edit"
                         │                                           │
-              streamReply (existing SSE)              buildEditProposal (pure)
+              streamReply (existing SSE)              buildProposal (pure)
                         │                                           │
                         │                        ┌──────────────────┴───────────────┐
                         │                        ▼                                  ▼
@@ -59,9 +62,13 @@ ChatPanel (client) ── POST {message} ──► /api/documents/[id]/chat (rou
                         │              TranscriptionEditCard
                         │                        │ Confirmar
                         │                        ▼
-                        │        applyPageTranscriptionEdit (server action)
+                        │     applyPageTranscriptionCorrection (server action)
                         │                        │
-                        └────────────────────────┴──► document_pages.text updated
+                        │        ┌───────────────┴────────────────┐
+                        │        ▼                                ▼
+                        │  document_pages.text            clinical_records.record
+                        │  (literal replace)              + findings (deep replace)
+                        └────────────────────────────────┴──► client refresh (record view + transcript)
 ```
 
 ## 4. Intent, prompt and matching — `packages/ai/src/chat/edit-proposal.ts`
@@ -76,7 +83,7 @@ export const chatIntentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("edit"),
     pageNumber: z.number().int().positive().optional(),
-    incorrect: z.string().min(1),
+    incorrect: z.string().min(2),
     correct: z.string().min(1),
   }),
 ]);
@@ -103,10 +110,15 @@ export type EditProposal = {
 
 export function escapeRegExp(text: string): string;
 export function replaceLiteral(
-  pageText: string,
+  text: string,
   incorrect: string,
   correct: string,
 ): { text: string; occurrences: number };
+export function replaceLiteralDeep(
+  value: unknown,
+  incorrect: string,
+  correct: string,
+): { value: unknown; occurrences: number };
 export function resolveTargetPage(
   pages: DocumentPage[],
   intent: TranscriptionEditIntent,
@@ -129,6 +141,11 @@ export function buildEditProposal(
 - `replaceLiteral` builds a case-insensitive global regex from the escaped
   `incorrect` and replaces every occurrence with `correct`. Whitespace must match
   exactly; a paraphrase therefore fails cleanly with `occurrences === 0`.
+- `replaceLiteralDeep` walks a JSON value (objects, arrays, strings) and applies
+  `replaceLiteral` to every **string value** (never to keys), summing occurrences.
+  Non-strings are returned unchanged. It returns a new structure; the input is
+  not mutated. A minimum length of 2 for `incorrect` (schema) keeps a stray short
+  term from matching unrelated fields.
 - `resolveTargetPage`: if `intent.pageNumber` names an existing page use it;
   otherwise find pages whose text contains `incorrect`. Exactly one → that page;
   zero → `notFound`; more than one → `ambiguous`.
@@ -158,30 +175,49 @@ export interface LLMProvider {
 - `HeuristicLLMProvider`: always `{ kind: "question" }`.
 - `packages/ai/src/index.ts` exports the new types, schema, prompt and helpers.
 
-## 6. Persistence — `packages/db/src/repositories/document-pages.ts`
+## 6. Persistence — `packages/db`
 
-Add a text-only update (does **not** touch `status`):
+`document-pages.ts` — text-only update (does **not** touch `status`):
 
 ```ts
-async updateText(
+async updateText(documentId: string, pageNumber: number, text: string): Promise<void>;
+```
+
+`clinical-records.ts` — update the record, findings and index without touching
+the completeness flags:
+
+```ts
+async updateRecord(
   documentId: string,
-  pageNumber: number,
-  text: string,
+  record: ClinicalRecord,
+  findings: Finding[],
+  indexed: ClinicalRecordIndex,
 ): Promise<void>;
 ```
 
-Implemented as a single `update` on `(documentId, pageNumber)`. `getPage` already
+Implemented as a single `update` on the document id, setting `record`,
+`findings`, `patientName`, `admissionDate`, `dischargeDate`; it leaves
+`extractionIncomplete` and `failedChunkCount` untouched. `getPage` already
 exists and is reused for re-validation. No migration.
 
 ## 7. Orchestration — `apps/web/lib/chat-service.ts`
 
-Extend `ChatDeps.pages`:
+Extend `ChatDeps`:
 
 ```ts
 pages: {
   listForDocument(id: string): Promise<DocumentPage[]>;
   getPage(documentId: string, pageNumber: number): Promise<DocumentPage | null>;
   updateText(documentId: string, pageNumber: number, text: string): Promise<void>;
+};
+clinicalRecords: {
+  getByDocument(id: string): Promise<ClinicalRecordWithFindings | null>;
+  updateRecord(
+    documentId: string,
+    record: ClinicalRecord,
+    findings: Finding[],
+    indexed: ClinicalRecordIndex,
+  ): Promise<void>;
 };
 ```
 
@@ -211,10 +247,13 @@ export function buildProposal(
   intent: ChatIntent,
 ): BuildProposalResult | null; // null only when intent.kind === "question"
 
-export async function applyTranscriptionEdit(
+export async function applyTranscriptionCorrection(
   deps: ChatDeps,
   input: { documentId: string; pageNumber: number; incorrect: string; correct: string },
-): Promise<{ ok: true; newText: string } | { ok: false; error: string }>;
+): Promise<
+  | { ok: true; newText: string; recordChanged: boolean }
+  | { ok: false; error: string; reason: "notFound" | "noMatch" | "invalid" }
+>;
 ```
 
 - `classifyIntent` calls `provider.proposeTranscriptionEdit` with the question,
@@ -222,9 +261,19 @@ export async function applyTranscriptionEdit(
 - `buildProposal` delegates to `buildEditProposal` (§4) and returns `null` only
   when the intent is a question; otherwise it propagates the failure `reason`
   (`notFound` / `ambiguous` / `noMatch`) so the route can pick the reply.
-- `applyTranscriptionEdit` re-reads the page (`getPage`), re-runs `replaceLiteral`
-  to guard against a changed page, writes via `updateText` when there is at least
-  one occurrence, and returns the new text. Zero occurrences → `noMatch` error.
+- `applyTranscriptionCorrection`:
+  1. `pages.getPage`; missing → `notFound`.
+  2. `replaceLiteral(page.text, ...)`; zero occurrences → `noMatch`.
+  3. Load the record via `clinicalRecords.getByDocument`. If present,
+     `replaceLiteralDeep` over `record` and over `findings`, then recompute
+     `patientName`/`admissionDate`/`dischargeDate` from the patched record (same
+     three fields as `runExtraction`). Validate the patched record with
+     `clinicalRecordSchema` and re-assign nothing; if validation fails → `invalid`
+     and **no write happens**.
+  4. Write the page (`updateText`) and, when a record existed, the record
+     (`updateRecord`). Recompute the exact `newText` from step 2 so the caller can
+     preview it.
+  5. Return `{ ok: true, newText, recordChanged }`.
 
 `prepareChat` and `streamReply` keep their current behaviour.
 
@@ -234,7 +283,7 @@ After `prepareChat` succeeds:
 
 1. `const intent = await classifyIntent(deps, prepared.context)`.
 2. If `intent.kind === "edit"`:
-   - `const proposal = buildProposal(prepared.pages, intent)`.
+   - `const built = buildProposal(prepared.pages, intent)`.
    - **Proposal resolved** → emit one SSE frame
      `data: {"proposal":{pageNumber,incorrect,correct,occurrences,resultingText}}\n\n`
      and close. Nothing extra is persisted (the user message already is).
@@ -249,21 +298,26 @@ SSE payload union becomes: `{ delta } | { done, message } | { proposal } | { mes
 ## 9. Apply action — `apps/web/lib/actions.ts`
 
 ```ts
-export type ApplyTranscriptionEditResult =
-  | { ok: true; newText: string }
+export type ApplyTranscriptionCorrectionResult =
+  | { ok: true; newText: string; recordChanged: boolean }
   | { ok: false; error: string };
 
-export async function applyPageTranscriptionEdit(input: {
+export async function applyPageTranscriptionCorrection(input: {
   documentId: string;
   pageNumber: number;
   incorrect: string;
   correct: string;
-}): Promise<ApplyTranscriptionEditResult>;
+}): Promise<ApplyTranscriptionCorrectionResult>;
 ```
 
-Calls `applyTranscriptionEdit(getContainer(), input)`; on success revalidates
-`documentTag(documentId)` and `/documents/[id]` so the PDF viewer transcript
-refreshes. Errors map to `ui.editFailed` / `ui.editNoMatch`.
+Calls `applyTranscriptionCorrection(getContainer(), input)`; on success
+revalidates `documentTag(documentId)` and `/documents/[id]` so both the PDF
+viewer transcript and the cached clinical record refresh. Errors map to
+`ui.editFailed` / `ui.editNoMatch`.
+
+Non-atomicity note: the page and record are two separate updates. The patched
+record is validated **before** either write, so the only residual risk is a write
+failing after the page update; for this single-user local app that is accepted.
 
 ## 10. UI — `apps/web/components/transcription-edit-card.tsx` (+ `chat-panel.tsx`)
 
@@ -300,9 +354,10 @@ export function TranscriptionEditCard({
   is removed and `proposal` is set (terminal → clears `sending`).
 - On `message` (edit not located) the live bubble is replaced with the persisted
   message, as the `done` path does.
-- Confirm → `applyPageTranscriptionEdit(...)`; on success append an assistant
-  message `ui.editApplied`, clear the proposal and `router.refresh()`; on failure
-  keep the card and show `editError`.
+- Confirm → `applyPageTranscriptionCorrection(...)`; on success append an
+  assistant message `ui.editApplied`, clear the proposal and `router.refresh()` so
+  the record view and the transcript update; on failure keep the card and show
+  `editError`.
 - Cancel → clear the proposal and append `ui.editCancelled`.
 
 ## 11. Copy — `packages/lib/src/i18n/es.ts`
@@ -311,13 +366,20 @@ Add: `editProposalTitle`, `editProposalPage(page)`, `editProposalOccurrences(n)`
 `editConfirm`, `editCancel`, `editApplying`, `editApplied`, `editCancelled`,
 `editNotLocated`, `editNoMatch`, `editFailed`. All Spanish, non-empty.
 
+`editApplied` reads "Listo. Corregí la transcripción y el registro." (no mention
+of re-extracting; the record is already updated).
+
 ## 12. Error handling
 
 - Provider failure during triage → **fail open**: answer as a normal question.
 - Page not named and not uniquely found → explanatory assistant message, no write.
-- Literal not present (or paraphrased) → no-match assistant message, no write.
-- Page changed between proposal and confirm → `applyTranscriptionEdit` re-validates;
-  no write, card shows `editNoMatch`.
+- Literal not present in the page (or paraphrased) → no-match assistant message,
+  no write.
+- Patched record fails schema validation → `invalid`, no write at all.
+- Page changed between proposal and confirm → `applyTranscriptionCorrection`
+  re-validates; no write, card shows `editNoMatch`.
+- Record missing (e.g. extraction failed) → the page is still corrected; only the
+  record propagation is skipped.
 - Document not `ready` → unchanged `409`.
 - No clinical content (question, page text, replacement) is logged.
 
@@ -326,17 +388,24 @@ Add: `editProposalTitle`, `editProposalPage(page)`, `editProposalOccurrences(n)`
 TDD, `bun test` per workspace. No component-render framework exists; component
 tests exercise pure helpers/props as elsewhere.
 
-- `packages/ai`: `chat/edit-proposal.test.ts` — schema accepts/rejects intents;
-  `replaceLiteral` replaces every case-insensitive occurrence and counts them;
-  zero matches reported; `resolveTargetPage` by explicit number, by unique literal,
-  `notFound`, `ambiguous`; `buildEditProposal` returns the resulting text;
-  `buildEditProposalUserPrompt` includes pages/history/question. Provider tests:
-  OpenAI parses a valid JSON intent and retries on invalid JSON; fake honours the
-  configured intent; heuristic returns `question`.
+- `packages/ai`: `chat/edit-proposal.test.ts` — schema accepts/rejects intents
+  (including `incorrect` shorter than 2); `replaceLiteral` replaces every
+  case-insensitive occurrence and counts them; zero matches reported;
+  `replaceLiteralDeep` walks nested objects/arrays, only touches string values,
+  preserves non-strings and does not mutate the input; `resolveTargetPage` by
+  explicit number, by unique literal, `notFound`, `ambiguous`; `buildEditProposal`
+  returns the resulting text; `buildEditProposalUserPrompt` includes
+  pages/history/question. Provider tests: OpenAI parses a valid JSON intent and
+  retries on invalid JSON; fake honours the configured intent; heuristic returns
+  `question`.
 - `apps/web`: `chat-service.test.ts` — `classifyIntent` fail-open on provider
-  throw; `buildProposal` resolves/returns null; `applyTranscriptionEdit` writes on
-  a match, refuses on no-match and on a missing page; `prepareChat` now returns
-  pages.
+  throw; `buildProposal` resolves/returns null with the right reason; 
+  `applyTranscriptionCorrection` corrects the page, deep-patches the record and
+  findings, recomputes the index, and refuses on `noMatch`, missing page and
+  invalid patched record; `prepareChat` now returns pages.
+- `packages/db`: `repositories/document-pages.test.ts` `updateText` (gated by
+  `TEST_DATABASE_URL`); `repositories/clinical-records.test.ts` `updateRecord`
+  preserves the completeness flags.
 - `apps/web` route test (`chat/route.test.ts`): an edit intent yields a
   `proposal` frame and no assistant row; an unresolvable edit yields a persisted
   `message` frame.
@@ -359,9 +428,10 @@ Modified:
 - `packages/ai/src/providers/heuristic/heuristic-provider.ts`
 - `packages/ai/src/index.ts`
 - `packages/db/src/repositories/document-pages.ts` (`updateText`)
+- `packages/db/src/repositories/clinical-records.ts` (`updateRecord`)
 - `apps/web/lib/chat-service.ts` (+ test)
 - `apps/web/app/api/documents/[id]/chat/route.ts` (+ test)
-- `apps/web/lib/actions.ts` (`applyPageTranscriptionEdit`)
+- `apps/web/lib/actions.ts` (`applyPageTranscriptionCorrection`)
 - `apps/web/components/chat-panel.tsx`
 - `apps/web/lib/serialize-chat-message.ts` (proposal view type, if needed)
 - `packages/lib/src/i18n/es.ts` (+ test)
@@ -370,8 +440,11 @@ No migration. No changes to extraction, OCR or the worker pipeline.
 
 ## 15. Follow-ups (not in scope)
 
-- Optional automatic re-extraction after a confirmed edit (the owner chose manual).
+- Incremental extraction: persist chunk partials, re-map only the chunk that
+  contains the edited page, re-reduce and re-analyze. Needed if a correction must
+  re-interpret a page rather than swap a literal.
 - An edit-history/audit trail (`access_log` or a dedicated table) and an
   "edited" badge with restore.
 - A direct edit control in the transcription tab (out of chat).
 - Sentence-level diff highlighting inside the resulting text preview.
+- Atomic page + record update (single transaction) if concurrent editing appears.
