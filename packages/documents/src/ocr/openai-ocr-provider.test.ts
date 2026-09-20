@@ -114,6 +114,23 @@ describe("OpenAIVisionOCRProvider", () => {
     expect(imageDetail(requests[0] ?? {})).toBe("high");
   });
 
+  test("instructs the model to preserve tables and checkboxes in Markdown", async () => {
+    const { client, requests } = capturingClient("| TA |\n| --- |\n| 120/80 |");
+    const provider = new OpenAIVisionOCRProvider({
+      apiKey: "test",
+      model: "gpt-5.6-luna",
+      client,
+    });
+    await provider.transcribePage({
+      pageNumber: 1,
+      png: new Uint8Array([1, 2]),
+    });
+    const prompt = systemPrompt(requests[0] ?? {});
+    expect(prompt).toContain("Markdown");
+    expect(prompt).toContain("- [x]");
+    expect(prompt).toContain("table");
+  });
+
   test("falls back safely when the response is invalid JSON", async () => {
     const { client } = capturingClient("not json at all");
     const provider = new OpenAIVisionOCRProvider({

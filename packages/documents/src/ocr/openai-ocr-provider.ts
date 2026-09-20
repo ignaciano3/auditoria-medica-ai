@@ -47,7 +47,12 @@ const CLASSIFY_SYSTEM_PROMPT =
 const TRANSCRIBE_SYSTEM_PROMPT =
   "Transcribe faithfully the text of this Spanish clinical document. Always " +
   "transcribe in Spanish. Do not interpret or add information. Ignore " +
-  "signatures and stamps.";
+  "signatures and stamps. Preserve the visual layout using Markdown: render " +
+  "tables as GitHub-flavored Markdown tables (a header row, a | --- | " +
+  "separator row, then one row per table row); render checkboxes and tick " +
+  "boxes as Markdown task list items (- [x] when checked, - [ ] when " +
+  "unchecked); keep headings and lists. Only structure what is present in " +
+  "the page; never invent rows, columns or values.";
 
 function toDataUrl(png: Uint8Array): string {
   return `data:image/png;base64,${Buffer.from(png).toString("base64")}`;
