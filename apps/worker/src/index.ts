@@ -8,6 +8,7 @@ import {
 } from "@audit/db";
 import { createOcrProviders, renderPdfPages } from "@audit/documents";
 import { getEnv, PgBossQueue, S3Storage } from "@audit/lib";
+import { createJobHandler } from "./job-handler.ts";
 import { createExtractDocument } from "./pipeline/extract-document.ts";
 import {
   createProcessDocument,
@@ -52,51 +53,50 @@ async function main(): Promise<void> {
 
   const queue = new PgBossQueue({ connectionString: env.DATABASE_URL });
   await queue.start();
-  await queue.handle(async (job) => {
-    logger.info({
-      event: "job_received",
-      kind: job.kind,
-      documentId: job.documentId,
-    });
-    const settings = await settingsCache.get();
-    const sessionId = `document:${job.documentId}`;
-    const provider = createLlmProvider(settings, { sessionId });
-    const { ocr, handwrittenOcr } = createOcrProviders(settings, { sessionId });
-
-    switch (job.kind) {
-      case "process-document":
-        await createProcessDocument({
-          documents,
-          pages,
-          storage,
-          render: renderPdfPages,
-          ocr,
-          handwrittenOcr,
-          provider,
-          clinicalRecords,
-          logger,
-        })({ documentId: job.documentId });
-        break;
-      case "transcribe-page":
-        await createTranscribePage({
-          pages,
-          storage,
-          ocr,
-          handwrittenOcr,
-          logger,
-        })({ documentId: job.documentId, pageNumber: job.pageNumber });
-        break;
-      case "extract-document":
-        await createExtractDocument({
-          documents,
-          pages,
-          provider,
-          clinicalRecords,
-          logger,
-        })({ documentId: job.documentId });
-        break;
-    }
-  });
+  await queue.handle(
+    createJobHandler({
+      documents,
+      logger,
+      loadSettings: () => settingsCache.get(),
+      createProvider: createLlmProvider,
+      createOcr: createOcrProviders,
+      dispatch: async (job, runtime) => {
+        switch (job.kind) {
+          case "process-document":
+            await createProcessDocument({
+              documents,
+              pages,
+              storage,
+              render: renderPdfPages,
+              ocr: runtime.ocr,
+              handwrittenOcr: runtime.handwrittenOcr,
+              provider: runtime.provider,
+              clinicalRecords,
+              logger,
+            })({ documentId: job.documentId });
+            break;
+          case "transcribe-page":
+            await createTranscribePage({
+              pages,
+              storage,
+              ocr: runtime.ocr,
+              handwrittenOcr: runtime.handwrittenOcr,
+              logger,
+            })({ documentId: job.documentId, pageNumber: job.pageNumber });
+            break;
+          case "extract-document":
+            await createExtractDocument({
+              documents,
+              pages,
+              provider: runtime.provider,
+              clinicalRecords,
+              logger,
+            })({ documentId: job.documentId });
+            break;
+        }
+      },
+    }),
+  );
   process.stdout.write(`${JSON.stringify({ event: "worker_ready" })}\n`);
 }
 
