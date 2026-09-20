@@ -133,28 +133,33 @@ export function ChatPanel({
     if (proposal === null || applying) return;
     setApplying(true);
     setEditError(null);
-    const result = await applyPageTranscriptionCorrection({
-      documentId,
-      pageNumber: proposal.pageNumber,
-      incorrect: proposal.incorrect,
-      correct: proposal.correct,
-    });
-    setApplying(false);
-    if (!result.ok) {
-      setEditError(result.error);
-      return;
+    try {
+      const result = await applyPageTranscriptionCorrection({
+        documentId,
+        pageNumber: proposal.pageNumber,
+        incorrect: proposal.incorrect,
+        correct: proposal.correct,
+      });
+      if (!result.ok) {
+        setEditError(result.error);
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `local-applied-${Date.now()}`,
+          role: "assistant",
+          content: ui.editApplied,
+          citedPages: [],
+        },
+      ]);
+      setProposal(null);
+      router.refresh();
+    } catch {
+      setEditError(ui.editFailed);
+    } finally {
+      setApplying(false);
     }
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `local-applied-${Date.now()}`,
-        role: "assistant",
-        content: ui.editApplied,
-        citedPages: [],
-      },
-    ]);
-    setProposal(null);
-    router.refresh();
   }, [proposal, applying, documentId, router]);
 
   const cancelEdit = useCallback(() => {
