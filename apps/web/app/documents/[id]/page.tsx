@@ -17,6 +17,7 @@ import { buttonVariants } from "../../../components/ui/button.tsx";
 import { Callout } from "../../../components/ui/callout.tsx";
 import { getClinicalData } from "../../../lib/cached-data.ts";
 import { getContainer } from "../../../lib/container.ts";
+import { serializeChatMessage } from "../../../lib/serialize-chat-message.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
 
 export default function DocumentDetailPage({
@@ -55,6 +56,7 @@ async function DocumentContent({
   if (!row) notFound();
 
   const pages = await container.pages.listForDocument(id);
+  const chatMessages = await container.chatMessages.listForDocument(id);
 
   // Clinical data and reviews are immutable once the document is ready, so we
   // read them through the cache (tagged per document, invalidated on review).
@@ -137,7 +139,11 @@ async function DocumentContent({
           )}
         </div>
         <div className="min-h-0">
-          <ChatPanel />
+          <ChatPanel
+            documentId={doc.id}
+            initialMessages={chatMessages.map(serializeChatMessage)}
+            ready={doc.status === "ready"}
+          />
         </div>
       </div>
     </>
