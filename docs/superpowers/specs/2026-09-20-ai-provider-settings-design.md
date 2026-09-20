@@ -64,28 +64,35 @@ export const PROVIDER_MODELS = {
   qwen: ["qwen3.8-flash", "qwen3.8-max", "qwen3-vl-plus"],
   opencode: [
     "deepseek-v4.1-flash",
-    "deepseek-v4-pro",
-    "deepseek-v4-flash",
     "deepseek-v4-flash-vision-exp",
     "glm-5.3-flash",
     "glm-5.3",
-    "glm-5.2",
-    "glm-5.1",
     "kimi-k3",
-    "kimi-k2.7-code",
-    "kimi-k2.6",
     "longcat-2.0",
     "mimo-v2.5",
     "mimo-v2.5-pro",
-    "hy3",
+    "hy4-preview",
   ],
 } as const;
 ```
 
-Only OpenCode Go's `chat/completions` models are listed. Go also serves `grok-4.6`,
-`gpt-5.6-luna`, the `muse-spark-*` models via `/responses`, and Qwen/MiniMax via
-`/messages`; those are **not** reachable through the OpenAI `chat.completions` client
-and are deliberately excluded so the UI never offers a broken choice.
+Only OpenCode Go's `chat/completions` models are listed, and within each family only
+the newest line, to keep the selector free of superseded models:
+
+- **DeepSeek:** `deepseek-v4.1-flash` (newest). `deepseek-v4-flash` (retired) and
+  `deepseek-v4-pro` (previous generation, being phased out) are dropped.
+  `deepseek-v4-flash-vision-exp` is kept because it is the only vision option on Go,
+  so it is required for OCR.
+- **GLM:** `glm-5.3` (newest) and its `glm-5.3-flash` tier; `glm-5.2`/`glm-5.1` dropped.
+- **Kimi:** `kimi-k3`; `kimi-k2.7-code`/`kimi-k2.6` dropped.
+- **LongCat:** `longcat-2.0` (only one).
+- **MiMo:** `mimo-v2.5` and `mimo-v2.5-pro` (same generation, different tier).
+- **Hy:** `hy4-preview` (newest); `hy3` dropped.
+
+Go also serves `grok-4.6`, `gpt-5.6-luna`, the `muse-spark-*` models via `/responses`,
+and Qwen/MiniMax via `/messages`; those are **not** reachable through the OpenAI
+`chat.completions` client and are deliberately excluded so the UI never offers a
+broken choice.
 
 - DeepSeek direct uses the name `deepseek-flash` (runs DeepSeek-V4.1-Flash, vision
   supported). OpenCode Go uses `deepseek-v4.1-flash` (with a dot). They are different
