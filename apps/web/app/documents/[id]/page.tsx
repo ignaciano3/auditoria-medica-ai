@@ -140,6 +140,7 @@ async function DocumentContent({
         </div>
         <div className="min-h-0">
           <ChatPanel
+            key={doc.id}
             documentId={doc.id}
             initialMessages={chatMessages.map(serializeChatMessage)}
             ready={doc.status === "ready"}
