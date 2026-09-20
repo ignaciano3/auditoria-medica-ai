@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { StoredProviderSettings } from "@audit/domain";
 import type { Env } from "@audit/lib";
 import {
+  buildDecryptor,
   createSettingsCache,
   loadEffectiveSettings,
+  SettingsDecryptionError,
   type SettingsDeps,
 } from "./settings.ts";
 
@@ -55,6 +57,20 @@ describe("loadEffectiveSettings", () => {
     expect(result.llmProvider).toBe("opencode");
     expect(result.keys.opencode).toBe("dec:blob");
     expect(result.keys.openai).toBe("dec:blob-openai");
+  });
+});
+
+describe("buildDecryptor", () => {
+  test("throws a typed error when the encryption key is missing", () => {
+    const decrypt = buildDecryptor("");
+    expect(() => decrypt("blob")).toThrow(SettingsDecryptionError);
+  });
+
+  test("throws a typed error on a malformed stored blob", () => {
+    const decrypt = buildDecryptor(Buffer.alloc(32, 1).toString("base64"));
+    expect(() => decrypt("not-an-encrypted-blob")).toThrow(
+      SettingsDecryptionError,
+    );
   });
 });
 

@@ -12,12 +12,19 @@ export type SettingsDeps = {
   decrypt: (blob: string) => string;
 };
 
+export class SettingsDecryptionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SettingsDecryptionError";
+  }
+}
+
 export function buildDecryptor(
   encryptionKey: string,
 ): (blob: string) => string {
   if (encryptionKey.trim().length === 0) {
     return () => {
-      throw new Error(
+      throw new SettingsDecryptionError(
         "SETTINGS_ENCRYPTION_KEY is required to read stored keys",
       );
     };
@@ -25,7 +32,13 @@ export function buildDecryptor(
   const key = requireEncryptionKey({
     SETTINGS_ENCRYPTION_KEY: encryptionKey,
   });
-  return (blob: string) => decryptSecret(blob, key);
+  return (blob: string) => {
+    try {
+      return decryptSecret(blob, key);
+    } catch {
+      throw new SettingsDecryptionError("Failed to decrypt a stored key");
+    }
+  };
 }
 
 export async function loadEffectiveSettings(
