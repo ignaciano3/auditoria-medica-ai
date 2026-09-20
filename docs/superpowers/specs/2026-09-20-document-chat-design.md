@@ -53,6 +53,7 @@ Decided with the project owner during brainstorming:
 | Where generation runs | **In the web app** (SSE route handler + testable service). Provider factory shared from `@audit/ai`; keys already available to the web process via `@audit/lib` env. |
 | Reasoning effort / provider | Same provider selection as extraction (`LLM_PROVIDER`), reused through the shared factory. `heuristic` must work end-to-end. |
 | Chunk granularity | **Page-level** (one chunk per page), so a citation is always a page number. Paragraph chunking is a follow-up. |
+| Citation validation | Markers `[p.N]` survive only when the page is BM25-retrieved **or** appears in a record/finding `Source`; invented pages are dropped. |
 | History source | Loaded **server-side from `chat_messages`**; the client only sends the new question (not prior turns). |
 
 ## 4. Architecture
@@ -223,13 +224,24 @@ export function splitCitations(
   text: string,
   allowedPages: number[],
 ): CitationSegment[];                                            // render-ready segments
+export function sourcePagesFromContext(
+  record: ClinicalRecord,
+  findings: Finding[],
+): number[];                                                     // pages cited by record/findings sources
+export function allowedCitationPages(context: ChatContext): number[];
 ```
 
 - Regex `\[p\.(\d+)\]`. `validateCitations` keeps only markers whose page is in
-  `allowedPages` (the retrieved pages), so a hallucinated page number can never
-  be persisted or linked. `splitCitations` splits the text into literal segments
-  and valid page segments (invalid markers are dropped), giving the UI one pure
-  function to render. The stored content keeps the raw markers.
+  `allowedPages`, so a hallucinated page number can never be persisted or linked.
+  `splitCitations` splits the text into literal segments and valid page segments
+  (invalid markers are dropped), giving the UI one pure function to render. The
+  stored content keeps the raw markers.
+- **`allowedCitationPages`** is the union of (a) the BM25-retrieved page numbers
+  and (b) every page number appearing in the `Source`s of the record and the
+  findings (`sourcePagesFromContext`). Reason: the structured record already
+  carries `sources` for each extracted value (e.g. a medication's page), and a
+  factual answer grounded in that structured data must keep its citation even
+  when BM25 did not rank that page in the top-K. Unknown pages are still dropped.
 
 ### 4.6 Orchestration — `apps/web/lib/chat-service.ts`
 
@@ -282,7 +294,7 @@ export async function* streamReply(
 1. Iterate `deps.provider.answerClinicalQuestion(context)`; yield each delta while
    accumulating the full text.
 2. If the accumulated text is empty/whitespace → throw `ChatError` `failed`.
-3. `validateCitations(text, context.pages.map(p => p.pageNumber))`; persist the
+3. `validateCitations(text, allowedCitationPages(context))`; persist the
    **assistant** message (`content` = full raw text, `citedPages` = validated).
 4. Return the persisted `ChatMessageRow`.
 
@@ -294,7 +306,7 @@ A provider failure mid-stream propagates; the assistant message is not persisted
 
 1. Parse the body with zod: `{ message: string }`, trimmed length 1..2000.
    Invalid → `400 { error }` using the i18n `chatError`.
-2. `prepareChat(getContainer-ish deps, { documentId: id, question })`. Map errors:
+2. `prepareChat(chatDeps, { documentId: id, question })`. Map errors:
    `notFound → 404`, `notReady → 409`, `invalid → 400`; all return JSON with the
    Spanish message.
 3. Stream via a `ReadableStream` with headers `Content-Type: text/event-stream`,
@@ -396,7 +408,10 @@ exercise pure helpers and injected services (as in `findings-service.test.ts` an
     empty/failed pages excluded.
   - `chat/citations.test.ts`: parses multiple markers in order; validates against
     allowed pages; drops unknown pages; `splitCitations` returns ordered text/page
-    segments and drops invalid markers; handles text without markers.
+    segments and drops invalid markers; `sourcePagesFromContext` collects page
+    numbers from record/findings sources (including nested `ExtractedValue`
+    sources); `allowedCitationPages` unions retrieved and source pages; handles
+    text without markers.
   - `chat/prompts.test.ts`: user prompt contains the record, findings, retrieved
     pages, history and question, and does not include unretrieved page text;
     system prompt contains the fallback string.
@@ -408,7 +423,8 @@ exercise pure helpers and injected services (as in `findings-service.test.ts` an
 - `apps/web`: `lib/chat-service.test.ts` with fake deps and a fake streaming
   provider — happy path yields deltas and persists user+assistant with validated
   `citedPages`; `notFound`/`notReady`/`invalid` paths; empty provider output →
-  `failed` and no assistant row; non-retrieved citation dropped.
+  `failed` and no assistant row; a citation to a page neither retrieved nor
+  present in the record/findings sources is dropped.
 - `packages/lib`: `i18n/es.test.ts` asserts the new strings exist and are
   non-empty.
 - Optional: a route test mirroring `apps/web/app/api/documents/route.test.ts` for
