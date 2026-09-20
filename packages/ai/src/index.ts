@@ -1,4 +1,25 @@
 export {
+  allowedCitationPages,
+  type CitationSegment,
+  parseCitations,
+  sourcePagesFromContext,
+  splitCitations,
+  validateCitations,
+} from "./chat/citations.ts";
+export {
+  buildChatUserPrompt,
+  CHAT_SYSTEM_PROMPT,
+  type ChatContext,
+  type ChatTurn,
+  INSUFFICIENT_EVIDENCE_REPLY,
+} from "./chat/prompts.ts";
+export {
+  type RetrievedPage,
+  type RetrieveOptions,
+  retrievePages,
+  tokenize,
+} from "./chat/retriever.ts";
+export {
   type ChunkPagesOptions,
   chunkPages,
 } from "./extraction/chunk-pages.ts";

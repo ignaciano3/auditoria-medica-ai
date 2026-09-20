@@ -154,6 +154,9 @@ function makeDeps(options: {
     generateClinicalSummary: (record) => base.generateClinicalSummary(record),
     generateAuditSummary: (record, findings) =>
       base.generateAuditSummary(record, findings),
+    async *answerClinicalQuestion() {
+      yield "";
+    },
   };
 
   const processDocument = createProcessDocument({

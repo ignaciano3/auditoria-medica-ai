@@ -1,5 +1,6 @@
 import {
   createAppSettingsRepository,
+  createChatMessageRepository,
   createClinicalRecordRepository,
   createDocumentPageRepository,
   createDocumentRepository,
@@ -20,13 +21,16 @@ type ClinicalRecordRepository = ReturnType<
   typeof createClinicalRecordRepository
 >;
 type FindingReviewRepository = ReturnType<typeof createFindingReviewRepository>;
+type ChatMessageRepository = ReturnType<typeof createChatMessageRepository>;
+type AppSettingsRepository = ReturnType<typeof createAppSettingsRepository>;
 
 export type Container = {
   documents: DocumentRepository;
   pages: DocumentPageRepository;
   clinicalRecords: ClinicalRecordRepository;
   findingReviews: FindingReviewRepository;
-  appSettings: ReturnType<typeof createAppSettingsRepository>;
+  chatMessages: ChatMessageRepository;
+  appSettings: AppSettingsRepository;
   storage: StorageProvider;
   queue: JobQueue;
 };
@@ -42,6 +46,7 @@ export function getContainer(): Container {
       pages: createDocumentPageRepository(db),
       clinicalRecords: createClinicalRecordRepository(db),
       findingReviews: createFindingReviewRepository(db),
+      chatMessages: createChatMessageRepository(db),
       appSettings: createAppSettingsRepository(db),
       storage: new S3Storage({
         endpoint: env.S3_ENDPOINT,

@@ -70,6 +70,9 @@ function makeDeps(
     generateClinicalSummary: (record) => base.generateClinicalSummary(record),
     generateAuditSummary: (record, findings) =>
       base.generateAuditSummary(record, findings),
+    async *answerClinicalQuestion() {
+      yield "";
+    },
   };
 
   const deps: ExtractDocumentDeps = {

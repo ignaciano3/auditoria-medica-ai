@@ -1,4 +1,5 @@
 import type {
+  ChatRole,
   ClinicalRecord,
   DocumentStatus,
   Finding,
@@ -115,9 +116,9 @@ export const chatMessages = pgTable("chat_messages", {
   documentId: uuid("document_id")
     .notNull()
     .references(() => documents.id, { onDelete: "cascade" }),
-  role: text("role").notNull(),
+  role: text("role").$type<ChatRole>().notNull(),
   content: text("content").notNull(),
-  citedPages: jsonb("cited_pages").notNull().default([]),
+  citedPages: jsonb("cited_pages").$type<number[]>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

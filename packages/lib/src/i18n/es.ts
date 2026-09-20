@@ -241,6 +241,11 @@ export const ui = {
     "¿Cuál fue el motivo de ingreso?",
     "¿Qué medicación recibió durante la internación?",
   ],
+  chatThinking: "Buscando en el documento…",
+  chatError: "No se pudo obtener la respuesta. Intentá de nuevo.",
+  chatNotReady:
+    "El documento todavía se está procesando. Vas a poder preguntar cuando esté listo.",
+  chatInvalid: "La pregunta no es válida.",
   incompleteAnalysis: "Análisis incompleto",
   theme: "Tema",
   themeLight: "Claro",

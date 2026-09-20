@@ -11,6 +11,7 @@ export {
   type ProviderSettings,
   type StoredProviderSettings,
 } from "./ai-settings.ts";
+export type { ChatRole } from "./chat.ts";
 export {
   boundingBoxSchema,
   CLINICAL_EVENT_TYPES,

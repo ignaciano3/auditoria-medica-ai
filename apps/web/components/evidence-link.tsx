@@ -8,10 +8,12 @@ export function EvidenceLink({
   documentId,
   page,
   hash = viewerAnchorId,
+  label,
 }: {
   documentId: string;
   page: number;
   hash?: string | undefined;
+  label?: string | undefined;
 }) {
   const pathname = `/documents/${documentId}` as Route;
   const href = { pathname, query: { page }, hash };
@@ -21,7 +23,7 @@ export function EvidenceLink({
       className={buttonVariants({ variant: "secondary", size: "sm" })}
       href={href}
     >
-      {findings.viewPage(page)}
+      {label ?? findings.viewPage(page)}
     </Link>
   );
 }

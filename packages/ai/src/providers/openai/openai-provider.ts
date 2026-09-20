@@ -7,6 +7,11 @@ import {
 } from "@audit/domain";
 import OpenAI from "openai";
 import { z } from "zod";
+import {
+  buildChatUserPrompt,
+  CHAT_SYSTEM_PROMPT,
+  type ChatContext,
+} from "../../chat/prompts.ts";
 import type { LLMProvider } from "../../llm-provider.ts";
 import {
   ANALYSIS_CORRECTION_PROMPT,
@@ -21,6 +26,10 @@ import {
   EXTRACTION_SYSTEM_PROMPT,
 } from "../../prompts/extraction.ts";
 
+type ChatCompletionChunk = {
+  choices: Array<{ delta?: { content?: string | null } }>;
+};
+
 type ChatCompletionResponse = {
   choices: Array<{ message: { content: string | null } }>;
 };
@@ -30,7 +39,7 @@ export type OpenAICompatibleClient = {
     completions: {
       create: (
         input: Record<string, unknown>,
-      ) => Promise<ChatCompletionResponse>;
+      ) => Promise<ChatCompletionResponse | AsyncIterable<ChatCompletionChunk>>;
     };
   };
 };
@@ -156,7 +165,9 @@ export class OpenAIProvider implements LLMProvider {
     if (this.extraBody) {
       Object.assign(request, this.extraBody);
     }
-    const response = await this.client.chat.completions.create(request);
+    const response = (await this.client.chat.completions.create(
+      request,
+    )) as ChatCompletionResponse;
     return response.choices[0]?.message.content ?? null;
   }
 
@@ -231,6 +242,40 @@ export class OpenAIProvider implements LLMProvider {
       "generateAuditSummary",
       AUDIT_SUMMARY_SYSTEM_PROMPT,
       buildAuditSummaryUserPrompt(record, findings),
+    );
+  }
+
+  private async *completeStream(
+    system: string,
+    user: string,
+  ): AsyncIterable<string> {
+    const request: Record<string, unknown> = {
+      model: this.model,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      stream: true,
+    };
+    if (this.reasoningEffort !== null) {
+      request.reasoning_effort = this.reasoningEffort;
+    }
+    if (this.extraBody) {
+      Object.assign(request, this.extraBody);
+    }
+    const stream = (await this.client.chat.completions.create(
+      request,
+    )) as AsyncIterable<ChatCompletionChunk>;
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) yield delta;
+    }
+  }
+
+  async *answerClinicalQuestion(context: ChatContext): AsyncIterable<string> {
+    yield* this.completeStream(
+      CHAT_SYSTEM_PROMPT,
+      buildChatUserPrompt(context),
     );
   }
 }

@@ -179,3 +179,28 @@ describe("HeuristicLLMProvider", () => {
     expect(audit).toContain("Juan Pérez");
   });
 });
+
+test("answers with a page citation when a page is retrieved", async () => {
+  const provider = new HeuristicLLMProvider();
+  let text = "";
+  for await (const chunk of provider.answerClinicalQuestion({
+    documentId: "d1",
+    record: {
+      patient: {},
+      hospitalization: { diagnoses: [] },
+      history: { pathological: [], allergies: [], usualMedications: [] },
+      medications: [],
+      laboratory: [],
+      studies: [],
+      microbiology: [],
+      clinicalEvents: [],
+    },
+    findings: [],
+    pages: [{ pageNumber: 3, text: "x", score: 1 }],
+    history: [],
+    question: "q",
+  })) {
+    text += chunk;
+  }
+  expect(text).toContain("[p.3]");
+});

@@ -115,6 +115,13 @@ describe("ui viewer and chat labels", () => {
       ui.chatSuggestions.every((suggestion) => suggestion.length > 0),
     ).toBe(true);
   });
+
+  test("provides chat status and error copy", () => {
+    expect(ui.chatThinking.length).toBeGreaterThan(0);
+    expect(ui.chatError.length).toBeGreaterThan(0);
+    expect(ui.chatNotReady.length).toBeGreaterThan(0);
+    expect(ui.chatInvalid.length).toBeGreaterThan(0);
+  });
 });
 
 describe("medicationStatusLabels", () => {
