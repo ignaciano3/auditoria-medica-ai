@@ -5,6 +5,17 @@ import {
   type QueueJob,
 } from "./job-queue.ts";
 
+export const PROCESS_DOCUMENT_EXPIRE_SECONDS = 6 * 60 * 60;
+
+export function sendOptionsFor(
+  job: QueueJob,
+): { expireInSeconds: number } | undefined {
+  if (job.kind === "process-document") {
+    return { expireInSeconds: PROCESS_DOCUMENT_EXPIRE_SECONDS };
+  }
+  return undefined;
+}
+
 export class QueuePublishError extends Error {
   constructor() {
     super("Failed to publish the job to the queue");
@@ -39,7 +50,11 @@ export class PgBossQueue implements JobQueue {
   }
 
   async publish(job: QueueJob): Promise<void> {
-    const jobId = await this.boss.send(PROCESS_DOCUMENT_JOB, job);
+    const jobId = await this.boss.send(
+      PROCESS_DOCUMENT_JOB,
+      job,
+      sendOptionsFor(job),
+    );
     if (jobId === null) throw new QueuePublishError();
   }
 

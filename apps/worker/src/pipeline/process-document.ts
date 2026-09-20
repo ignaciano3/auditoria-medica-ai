@@ -43,7 +43,7 @@ type DocumentsDependency = {
 };
 
 type PagesDependency = {
-  clearForDocument(documentId: string): Promise<void>;
+  listForDocument(documentId: string): Promise<DocumentPage[]>;
   savePage(documentId: string, page: DocumentPage): Promise<void>;
 };
 
@@ -140,10 +140,12 @@ async function processAllPages(
   logger: ProcessingLogger,
   documentId: string,
   rendered: RenderedPage[],
+  existingPageNumbers: ReadonlySet<number>,
 ): Promise<DocumentPage[]> {
   const processedPages: DocumentPage[] = [];
 
   for (const page of rendered) {
+    if (existingPageNumbers.has(page.pageNumber)) continue;
     const key = pageImageKey(documentId, page.pageNumber);
     const { pageNumber, png } = page;
     await deps.storage.put(key, png, "image/png");
@@ -207,12 +209,16 @@ export function createProcessDocument(
 
       const bytes = await deps.storage.get(document.originalKey);
       const rendered = await render(bytes);
+      const existingPages = await deps.pages.listForDocument(documentId);
+      const existingPageNumbers = new Set(
+        existingPages.map((page) => page.pageNumber),
+      );
       await deps.documents.setPageCount(documentId, rendered.length);
-      await deps.pages.clearForDocument(documentId);
       logger.info({
         event: "document_rendered",
         documentId,
         pageCount: rendered.length,
+        resumedPageCount: existingPageNumbers.size,
       });
 
       logger.info({
@@ -225,9 +231,13 @@ export function createProcessDocument(
         logger,
         documentId,
         rendered,
+        existingPageNumbers,
       );
 
-      await runExtraction(deps, documentId, processedPages);
+      const allPages = [...existingPages, ...processedPages].sort(
+        (a, b) => a.pageNumber - b.pageNumber,
+      );
+      await runExtraction(deps, documentId, allPages);
     } catch (error) {
       logger.error({
         event: "document_failed",

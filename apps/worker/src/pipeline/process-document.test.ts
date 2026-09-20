@@ -97,6 +97,18 @@ function renderPageCount(count: number) {
   );
 }
 
+function persistedPage(pageNumber: number): DocumentPage {
+  return {
+    pageNumber,
+    text: `texto ${pageNumber}`,
+    docType: "evolution",
+    handwritten: false,
+    dataBearing: true,
+    status: "vision",
+    imageKey: `documents/d1/pages/${pageNumber}.png`,
+  };
+}
+
 function makeDeps(options: {
   render?: () => Promise<
     Array<{
@@ -116,15 +128,14 @@ function makeDeps(options: {
   analyzeError?: Error;
   extractError?: Error;
   extractErrorCall?: number;
+  existingPages?: DocumentPage[];
 }) {
   const updates: Update[] = [];
   const savedPages: DocumentPage[] = [];
-  const cleared: string[] = [];
   const storedKeys: string[] = [];
   const pageCounts: number[] = [];
   const ops: Array<
     | { type: "status"; status: DocumentStatus }
-    | { type: "clear" }
     | { type: "classify"; pageNumber: number }
     | { type: "savePage"; pageNumber: number }
   > = [];
@@ -184,11 +195,7 @@ function makeDeps(options: {
       },
     },
     pages: {
-      clearForDocument: (id) => {
-        cleared.push(id);
-        ops.push({ type: "clear" });
-        return Promise.resolve();
-      },
+      listForDocument: () => Promise.resolve(options.existingPages ?? []),
       savePage: (_id, page) => {
         savedPages.push(page);
         ops.push({ type: "savePage", pageNumber: page.pageNumber });
@@ -241,7 +248,6 @@ function makeDeps(options: {
     processDocument,
     updates,
     savedPages,
-    cleared,
     ops,
     storedKeys,
     pageCounts,
@@ -270,7 +276,6 @@ describe("createProcessDocument", () => {
     expect(statuses).toEqual(["processing", "extracting", "ready"]);
     expect(deps.pageCounts).toEqual([2]);
     expect(deps.savedPages).toHaveLength(2);
-    expect(deps.cleared).toEqual(["d1"]);
 
     expect(deps.storedKeys).toEqual([
       "documents/d1/pages/1.png",
@@ -329,15 +334,42 @@ describe("createProcessDocument", () => {
     expect(firstSave).toBeLessThan(secondClassify);
   });
 
-  test("clears stale pages before saving the new run", async () => {
+  test("resumes a retried run without clearing pages already persisted", async () => {
+    const deps = makeDeps({
+      render: () => renderPageCount(4),
+      existingPages: [persistedPage(1), persistedPage(2)],
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    const savedNumbers = deps.savedPages.map((page) => page.pageNumber);
+    expect(savedNumbers).toEqual([3, 4]);
+    const classifiedNumbers = deps.ops
+      .filter((op) => op.type === "classify")
+      .map((op) => op.pageNumber);
+    expect(classifiedNumbers).toEqual([3, 4]);
+  });
+
+  test("extracts from every page, including ones persisted by an earlier run", async () => {
+    const deps = makeDeps({
+      render: () => renderPageCount(4),
+      existingPages: [persistedPage(1), persistedPage(2)],
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.extractCalls).toHaveLength(1);
+    expect(deps.extractCalls[0]?.map((page) => page.pageNumber)).toEqual([
+      1, 2, 3, 4,
+    ]);
+  });
+
+  test("does not clear pages when starting a fresh run", async () => {
     const deps = makeDeps({});
 
     await deps.processDocument({ documentId: "d1" });
 
-    expect(deps.cleared).toEqual(["d1"]);
-    const clearIndex = deps.ops.findIndex((op) => op.type === "clear");
-    const firstSaveIndex = deps.ops.findIndex((op) => op.type === "savePage");
-    expect(clearIndex).toBeLessThan(firstSaveIndex);
+    expect(deps.savedPages.map((page) => page.pageNumber)).toEqual([1, 2]);
   });
 
   test("persists the reduced record, stamps provenance, and marks ready", async () => {
