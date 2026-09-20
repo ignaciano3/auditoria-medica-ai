@@ -3,7 +3,9 @@ import { ui } from "@audit/lib";
 import { NextResponse } from "next/server";
 import {
   type ChatDeps,
+  classifyIntent,
   MAX_QUESTION_LENGTH,
+  planChatOutcome,
   prepareChat,
   streamReply,
 } from "../../../../../lib/chat-service.ts";
@@ -20,6 +22,17 @@ export function parseChatBody(body: unknown): string | null {
     return null;
   }
   return question;
+}
+
+function sseResponse(stream: ReadableStream<Uint8Array>): Response {
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
 
 export async function POST(
@@ -59,15 +72,49 @@ export async function POST(
     return NextResponse.json({ error: prepared.error.message }, { status });
   }
 
+  const intent = await classifyIntent(deps, prepared.context);
+  const outcome = planChatOutcome(prepared.pages, intent);
   const encoder = new TextEncoder();
+  const frame = (payload: unknown) => `data: ${JSON.stringify(payload)}\n\n`;
+
+  if (outcome.kind === "message") {
+    const message = await deps.chatMessages.add({
+      documentId: id,
+      role: "assistant",
+      content: outcome.content,
+      citedPages: [],
+    });
+    return sseResponse(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(frame({ message: serializeChatMessage(message) })),
+          );
+          controller.close();
+        },
+      }),
+    );
+  }
+
+  if (outcome.kind === "proposal") {
+    return sseResponse(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(frame({ proposal: outcome.proposal })),
+          );
+          controller.close();
+        },
+      }),
+    );
+  }
+
   let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (payload: unknown) => {
         if (cancelled) return;
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(payload)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(frame(payload)));
       };
       try {
         const iterator = streamReply(deps, prepared.context);
@@ -95,12 +142,5 @@ export async function POST(
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  return sseResponse(stream);
 }
