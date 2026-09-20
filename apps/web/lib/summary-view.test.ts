@@ -6,12 +6,6 @@ function emptySummary(): ClinicalSummary {
   return {
     patient: {},
     diagnoses: [],
-    pathological: [],
-    allergies: [],
-    evolution: [],
-    studies: [],
-    microbiology: [],
-    treatment: [],
   };
 }
 
@@ -47,14 +41,11 @@ describe("hasClinicalSummaryContent", () => {
     expect(hasClinicalSummaryContent(summary)).toBe(true);
   });
 
-  test("is true when any section has content", () => {
+  test("is true when diagnoses are documented", () => {
     const summary = emptySummary();
-    summary.treatment = [
+    summary.diagnoses = [
       {
-        name: {
-          value: "Levofloxacina",
-          sources: [{ documentId: "d1", pageNumber: 1, text: "t" }],
-        },
+        value: "Neumonía",
         sources: [{ documentId: "d1", pageNumber: 1, text: "t" }],
       },
     ];

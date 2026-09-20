@@ -125,9 +125,15 @@ async function DocumentContent({
           <p>{doc.error}</p>
         </Callout>
       ) : null}
-      {clinicalSummary !== null &&
-      hasClinicalSummaryContent(clinicalSummary) ? (
-        <ClinicalSummaryView documentId={doc.id} summary={clinicalSummary} />
+      {clinical !== null &&
+      clinicalSummary !== null &&
+      (hasClinicalSummaryContent(clinicalSummary) ||
+        clinical.findings.length > 0) ? (
+        <ClinicalSummaryView
+          documentId={doc.id}
+          summary={clinicalSummary}
+          findings={clinical.findings}
+        />
       ) : null}
       {clinical !== null ? (
         <Timeline documentId={doc.id} groups={timelineGroups} />

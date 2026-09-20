@@ -57,24 +57,14 @@ describe("buildClinicalSummary", () => {
     const summary = buildClinicalSummary(baseRecord());
     expect(summary.reason).toBeUndefined();
     expect(summary.durationDays).toBeUndefined();
-    expect(summary.discharge).toBeUndefined();
-    expect(summary.evolution).toEqual([]);
+    expect(summary.diagnoses).toEqual([]);
   });
 
-  test("includes evolution and diagnosis events in the evolution list", () => {
+  test("passes documented diagnoses through", () => {
     const record = baseRecord();
-    record.clinicalEvents = [
-      {
-        date: "14/02/2026",
-        type: "clinical_evolution",
-        description: "Afebril, buena evolución",
-        sources: [source(3)],
-      },
-    ];
+    record.hospitalization.diagnoses = [value("Neumonía", 3)];
 
-    const evolution = buildClinicalSummary(record).evolution;
-    expect(evolution).toHaveLength(1);
-    expect(evolution[0]?.type).toBe("clinical_evolution");
+    expect(buildClinicalSummary(record).diagnoses).toHaveLength(1);
   });
 });
 

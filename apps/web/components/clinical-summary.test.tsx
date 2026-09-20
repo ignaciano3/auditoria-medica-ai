@@ -10,19 +10,13 @@ function source(pageNumber: number): Source {
   return { documentId: "d1", pageNumber, text: "t" };
 }
 
-function duplicateHistorySummary(): ClinicalSummary {
+function duplicateDiagnosesSummary(): ClinicalSummary {
   return {
     patient: {},
-    diagnoses: [],
-    pathological: [
+    diagnoses: [
       { value: "Niega HTA, DBT2", sources: [source(1)] },
       { value: "Niega HTA, DBT2", sources: [source(2)] },
     ],
-    allergies: [],
-    evolution: [],
-    studies: [],
-    microbiology: [],
-    treatment: [],
   };
 }
 
@@ -33,7 +27,8 @@ describe("ClinicalSummaryView", () => {
     render(
       <ClinicalSummaryView
         documentId="d1"
-        summary={duplicateHistorySummary()}
+        summary={duplicateDiagnosesSummary()}
+        findings={[]}
       />,
     );
 
@@ -43,6 +38,23 @@ describe("ClinicalSummaryView", () => {
     errorSpy.mockRestore();
 
     expect(keyWarnings).toHaveLength(0);
+  });
+
+  test("renders a compact overview without repeating the record sections", () => {
+    const { getByText, queryByText } = render(
+      <ClinicalSummaryView
+        documentId="d1"
+        summary={duplicateDiagnosesSummary()}
+        findings={[]}
+      />,
+    );
+
+    expect(getByText("Resumen")).not.toBeNull();
+    expect(getByText("Hallazgos")).not.toBeNull();
+    expect(queryByText("Antecedentes")).toBeNull();
+    expect(queryByText("Estudios")).toBeNull();
+    expect(queryByText("Microbiología")).toBeNull();
+    expect(queryByText("Alta")).toBeNull();
   });
 
   test("history section renders repeated values without duplicate React keys", () => {

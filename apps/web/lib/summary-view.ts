@@ -11,17 +11,10 @@ export function hasClinicalSummaryContent(clinical: ClinicalSummary): boolean {
     clinical.patient.age !== undefined ||
     clinical.patient.sex !== undefined ||
     clinical.patient.birthDate !== undefined ||
-    clinical.durationDays !== undefined ||
     clinical.admissionDate !== undefined ||
     clinical.dischargeDate !== undefined ||
+    clinical.durationDays !== undefined ||
     clinical.reason !== undefined ||
-    clinical.diagnoses.length > 0 ||
-    clinical.pathological.length > 0 ||
-    clinical.allergies.length > 0 ||
-    clinical.evolution.length > 0 ||
-    clinical.studies.length > 0 ||
-    clinical.microbiology.length > 0 ||
-    clinical.treatment.length > 0 ||
-    clinical.discharge !== undefined
+    clinical.diagnoses.length > 0
   );
 }

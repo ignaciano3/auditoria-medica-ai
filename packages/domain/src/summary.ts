@@ -1,7 +1,6 @@
 import type {
   ClinicalEventType,
   ClinicalRecord,
-  DischargeInformation,
   Medication,
   MicrobiologyResult,
   Patient,
@@ -19,36 +18,14 @@ export type ClinicalSummary = {
   durationDays?: number;
   reason?: ExtractedValue<string>;
   diagnoses: ExtractedValue<string>[];
-  pathological: ExtractedValue<string>[];
-  allergies: ExtractedValue<string>[];
-  evolution: TimelineEntry[];
-  studies: Study[];
-  microbiology: MicrobiologyResult[];
-  treatment: Medication[];
-  discharge?: DischargeInformation;
 };
 
 export function buildClinicalSummary(record: ClinicalRecord): ClinicalSummary {
-  const {
-    patient,
-    hospitalization,
-    history,
-    medications,
-    studies,
-    microbiology,
-    discharge,
-  } = record;
-
+  const { patient, hospitalization } = record;
   const durationDays = hospitalizationDurationDays(
     hospitalization.admissionDate?.value,
     hospitalization.dischargeDate?.value,
   );
-  const evolution = buildTimeline(record)
-    .flatMap((group) => group.entries)
-    .filter(
-      (entry) =>
-        entry.type === "clinical_evolution" || entry.type === "diagnosis",
-    );
 
   return {
     patient,
@@ -63,13 +40,6 @@ export function buildClinicalSummary(record: ClinicalRecord): ClinicalSummary {
       ? { reason: hospitalization.reason }
       : {}),
     diagnoses: hospitalization.diagnoses,
-    pathological: history.pathological,
-    allergies: history.allergies,
-    evolution,
-    studies,
-    microbiology,
-    treatment: medications,
-    ...(discharge !== undefined ? { discharge } : {}),
   };
 }
 
