@@ -76,6 +76,12 @@ export type {
   TextBlock,
 } from "./source.ts";
 export {
+  type AuditSummary,
+  buildAuditSummary,
+  buildClinicalSummary,
+  type ClinicalSummary,
+} from "./summary.ts";
+export {
   buildTimeline,
   type TimelineDetail,
   type TimelineEntry,
