@@ -1,4 +1,5 @@
 import type { ClinicalRecord, DocumentPage, Finding } from "@audit/domain";
+import type { ChatContext } from "./chat/prompts.ts";
 
 export interface LLMProvider {
   extractClinicalRecord(pages: DocumentPage[]): Promise<ClinicalRecord>;
@@ -8,4 +9,5 @@ export interface LLMProvider {
     record: ClinicalRecord,
     findings: Finding[],
   ): Promise<string>;
+  answerClinicalQuestion(context: ChatContext): AsyncIterable<string>;
 }

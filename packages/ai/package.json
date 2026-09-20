@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./chat/citations": "./src/chat/citations.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

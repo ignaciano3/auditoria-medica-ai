@@ -55,6 +55,10 @@ class TaggingProvider implements LLMProvider {
   ): Promise<string> {
     return "";
   }
+
+  async *answerClinicalQuestion(): AsyncIterable<string> {
+    yield "";
+  }
 }
 
 describe("mapExtract", () => {

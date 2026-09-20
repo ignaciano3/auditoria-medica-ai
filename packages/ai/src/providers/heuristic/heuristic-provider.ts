@@ -1,4 +1,8 @@
 import type { ClinicalRecord, DocumentPage, Finding } from "@audit/domain";
+import {
+  type ChatContext,
+  INSUFFICIENT_EVIDENCE_REPLY,
+} from "../../chat/prompts.ts";
 import type { LLMProvider } from "../../llm-provider.ts";
 import { analyzeClinicalRecordHeuristically } from "./heuristic-analyze.ts";
 import { extractClinicalRecordFromPages } from "./heuristic-extract.ts";
@@ -55,5 +59,14 @@ export class HeuristicLLMProvider implements LLMProvider {
       }
     }
     return lines.join("\n");
+  }
+
+  async *answerClinicalQuestion(context: ChatContext): AsyncIterable<string> {
+    const page = context.pages[0];
+    if (!page) {
+      yield INSUFFICIENT_EVIDENCE_REPLY;
+      return;
+    }
+    yield `La documentación analizada contiene información en la página ${page.pageNumber} [p.${page.pageNumber}].`;
   }
 }

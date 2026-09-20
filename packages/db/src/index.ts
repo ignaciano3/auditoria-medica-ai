@@ -1,5 +1,9 @@
 export { type Database, getDb } from "./client.ts";
 export {
+  type ChatMessageRow,
+  createChatMessageRepository,
+} from "./repositories/chat-messages.ts";
+export {
   type ClinicalRecordIndex,
   type ClinicalRecordRow,
   type ClinicalRecordWithFindings,

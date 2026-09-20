@@ -58,3 +58,19 @@ describe("FakeLLMProvider", () => {
     await expect(provider.generateAuditSummary(record, [])).resolves.toBe("");
   });
 });
+
+test("streams the configured answer", async () => {
+  const provider = new FakeLLMProvider({ record, answer: "Respuesta [p.1]" });
+  let text = "";
+  for await (const chunk of provider.answerClinicalQuestion({
+    documentId: "d1",
+    record,
+    findings: [],
+    pages: [],
+    history: [],
+    question: "q",
+  })) {
+    text += chunk;
+  }
+  expect(text).toBe("Respuesta [p.1]");
+});
