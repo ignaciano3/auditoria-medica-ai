@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ChatContext, LLMProvider } from "@audit/ai";
+import type { ChatContext, ChatIntent, LLMProvider } from "@audit/ai";
 import type {
   ClinicalRecordWithFindings,
   ChatMessageRow as Row,
@@ -8,9 +8,17 @@ import type {
   ClinicalRecord,
   DocumentPage,
   DocumentStatus,
+  Finding,
 } from "@audit/domain";
 import { ui } from "@audit/lib";
-import { type ChatDeps, prepareChat, streamReply } from "./chat-service.ts";
+import {
+  applyTranscriptionCorrection,
+  type ChatDeps,
+  classifyIntent,
+  planChatOutcome,
+  prepareChat,
+  streamReply,
+} from "./chat-service.ts";
 
 const record: ClinicalRecord = {
   patient: {},
@@ -32,16 +40,30 @@ const page: DocumentPage = {
   status: "vision",
 };
 
-function fakeProvider(chunks: string[]): LLMProvider {
+function fakeProvider(
+  chunks: string[],
+  intent: ChatIntent = { kind: "question" },
+): LLMProvider {
   return {
     extractClinicalRecord: () => Promise.reject(new Error("unused")),
     analyzeClinicalRecord: () => Promise.resolve([]),
     generateClinicalSummary: () => Promise.resolve(""),
     generateAuditSummary: () => Promise.resolve(""),
+    proposeTranscriptionEdit: () => Promise.resolve(intent),
     answerClinicalQuestion: async function* () {
       for (const chunk of chunks) yield chunk;
     },
-    proposeTranscriptionEdit: () => Promise.resolve({ kind: "question" }),
+  };
+}
+
+function pageOf(pageNumber: number, text: string): DocumentPage {
+  return {
+    pageNumber,
+    text,
+    docType: "evolution",
+    handwritten: false,
+    dataBearing: true,
+    status: "vision",
   };
 }
 
@@ -50,9 +72,13 @@ function makeDeps(options: {
   clinical?: ClinicalRecordWithFindings | null;
   pages?: DocumentPage[];
   chunks?: string[];
+  intent?: ChatIntent;
   added?: Array<{ role: string; content: string; citedPages: number[] }>;
+  written?: Array<{ documentId: string; pageNumber: number; text: string }>;
+  recordUpdates?: Array<{ record: ClinicalRecord; findings: Finding[] }>;
 }): ChatDeps {
   const added = options.added ?? [];
+  const pagesList = options.pages ?? [page];
   return {
     documents: {
       getById: () =>
@@ -60,7 +86,17 @@ function makeDeps(options: {
           options.status === undefined ? null : { status: options.status },
         ),
     },
-    pages: { listForDocument: () => Promise.resolve(options.pages ?? [page]) },
+    pages: {
+      listForDocument: () => Promise.resolve(pagesList),
+      getPage: (_documentId, pageNumber) =>
+        Promise.resolve(
+          pagesList.find((item) => item.pageNumber === pageNumber) ?? null,
+        ),
+      updateText: (documentId, pageNumber, text) => {
+        options.written?.push({ documentId, pageNumber, text });
+        return Promise.resolve();
+      },
+    },
     clinicalRecords: {
       getByDocument: () =>
         Promise.resolve(
@@ -73,6 +109,10 @@ function makeDeps(options: {
               }
             : options.clinical,
         ),
+      updateRecord: (_documentId, updated, findings) => {
+        options.recordUpdates?.push({ record: updated, findings });
+        return Promise.resolve();
+      },
     },
     chatMessages: {
       listForDocument: () => Promise.resolve([]),
@@ -92,9 +132,21 @@ function makeDeps(options: {
         } as Row);
       },
     },
-    provider: fakeProvider(options.chunks ?? ["Levofloxacina [p.5]"]),
+    provider: fakeProvider(
+      options.chunks ?? ["Levofloxacina [p.5]"],
+      options.intent,
+    ),
   };
 }
+
+const context: ChatContext = {
+  documentId: "d1",
+  record,
+  findings: [],
+  pages: [{ pageNumber: 5, text: "Levofloxacina", score: 1 }],
+  history: [],
+  question: "q",
+};
 
 async function drain(
   generator: AsyncGenerator<string, Row, void>,
@@ -149,6 +201,7 @@ describe("prepareChat", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
+    expect(result.pages.map((p) => p.pageNumber)).toEqual([5]);
     expect(result.context.pages.map((p) => p.pageNumber)).toEqual([5]);
     expect(result.context.question).toBe("¿Qué antibiótico?");
     expect(added).toEqual([
@@ -158,15 +211,6 @@ describe("prepareChat", () => {
 });
 
 describe("streamReply", () => {
-  const context: ChatContext = {
-    documentId: "d1",
-    record,
-    findings: [],
-    pages: [{ pageNumber: 5, text: "Levofloxacina", score: 1 }],
-    history: [],
-    question: "q",
-  };
-
   test("yields deltas and persists the validated assistant message", async () => {
     const added: Array<{
       role: string;
@@ -203,5 +247,181 @@ describe("streamReply", () => {
     const call = drain(streamReply(makeDeps({ added, chunks: [] }), context));
     await expect(call).rejects.toBeInstanceOf(Error);
     expect(added).toEqual([]);
+  });
+});
+
+describe("classifyIntent", () => {
+  test("returns the provider intent", async () => {
+    const intent = await classifyIntent(
+      makeDeps({
+        status: "ready",
+        intent: { kind: "edit", incorrect: "Ansel", correct: "Ariel" },
+      }),
+      context,
+    );
+    expect(intent).toEqual({
+      kind: "edit",
+      incorrect: "Ansel",
+      correct: "Ariel",
+    });
+  });
+
+  test("falls back to a question when the provider throws", async () => {
+    const deps = makeDeps({ status: "ready" });
+    deps.provider.proposeTranscriptionEdit = () =>
+      Promise.reject(new Error("provider down"));
+    await expect(classifyIntent(deps, context)).resolves.toEqual({
+      kind: "question",
+    });
+  });
+});
+
+describe("planChatOutcome", () => {
+  const pages = [pageOf(3, "Paciente Ansel")];
+
+  test("passes questions through", () => {
+    expect(planChatOutcome(pages, { kind: "question" })).toEqual({
+      kind: "question",
+    });
+  });
+
+  test("resolves an edit into a proposal", () => {
+    const outcome = planChatOutcome(pages, {
+      kind: "edit",
+      pageNumber: 3,
+      incorrect: "Ansel",
+      correct: "Ariel",
+    });
+    expect(outcome.kind).toBe("proposal");
+    if (outcome.kind === "proposal") {
+      expect(outcome.proposal.resultingText).toBe("Paciente Ariel");
+      expect(outcome.proposal.occurrences).toBe(1);
+    }
+  });
+
+  test("explains an edit that cannot be located", () => {
+    expect(
+      planChatOutcome(pages, {
+        kind: "edit",
+        incorrect: "Zzz",
+        correct: "Ariel",
+      }),
+    ).toEqual({ kind: "message", content: ui.editNotLocated });
+  });
+
+  test("explains a literal absent from the named page", () => {
+    expect(
+      planChatOutcome(pages, {
+        kind: "edit",
+        pageNumber: 3,
+        incorrect: "Zzz",
+        correct: "Ariel",
+      }),
+    ).toEqual({ kind: "message", content: ui.editNoMatch });
+  });
+});
+
+describe("applyTranscriptionCorrection", () => {
+  const pages = [pageOf(3, "Paciente Ansel")];
+  const clinical: ClinicalRecordWithFindings = {
+    record: {
+      ...record,
+      patient: {
+        name: {
+          value: "Ansel",
+          sources: [{ documentId: "d1", pageNumber: 3, text: "Ansel" }],
+        },
+      },
+    },
+    findings: [
+      {
+        id: "f1",
+        severity: "high",
+        category: "other",
+        title: "Ansel",
+        explanation: "El nombre Ansel se repite.",
+        evidence: [
+          {
+            source: { documentId: "d1", pageNumber: 3, text: "Ansel" },
+            relevance: "Nombre dudoso.",
+          },
+        ],
+        requiresHumanReview: true,
+      },
+    ],
+    extractionIncomplete: false,
+    failedChunkCount: 0,
+  };
+  const input = {
+    documentId: "d1",
+    pageNumber: 3,
+    incorrect: "Ansel",
+    correct: "Ariel",
+  };
+
+  test("corrects the page and propagates to the record and findings", async () => {
+    const written: Array<{
+      documentId: string;
+      pageNumber: number;
+      text: string;
+    }> = [];
+    const recordUpdates: Array<{
+      record: ClinicalRecord;
+      findings: Finding[];
+    }> = [];
+    const result = await applyTranscriptionCorrection(
+      makeDeps({ status: "ready", pages, clinical, written, recordUpdates }),
+      input,
+    );
+    expect(result).toEqual({
+      ok: true,
+      newText: "Paciente Ariel",
+      recordChanged: true,
+    });
+    expect(written).toEqual([
+      { documentId: "d1", pageNumber: 3, text: "Paciente Ariel" },
+    ]);
+    expect(recordUpdates[0]?.record.patient.name?.value).toBe("Ariel");
+    expect(recordUpdates[0]?.findings[0]?.title).toBe("Ariel");
+  });
+
+  test("refuses a literal that is not on the page and writes nothing", async () => {
+    const written: Array<{
+      documentId: string;
+      pageNumber: number;
+      text: string;
+    }> = [];
+    const result = await applyTranscriptionCorrection(
+      makeDeps({ status: "ready", pages, clinical, written }),
+      { ...input, incorrect: "Zzz" },
+    );
+    expect(result).toEqual({ ok: false, reason: "noMatch" });
+    expect(written).toHaveLength(0);
+  });
+
+  test("refuses a missing page", async () => {
+    const result = await applyTranscriptionCorrection(
+      makeDeps({ status: "ready", pages, clinical }),
+      { ...input, pageNumber: 9 },
+    );
+    expect(result).toEqual({ ok: false, reason: "notFound" });
+  });
+
+  test("corrects the page even when there is no stored record", async () => {
+    const written: Array<{
+      documentId: string;
+      pageNumber: number;
+      text: string;
+    }> = [];
+    const result = await applyTranscriptionCorrection(
+      makeDeps({ status: "ready", pages, clinical: null, written }),
+      input,
+    );
+    expect(result).toEqual({
+      ok: true,
+      newText: "Paciente Ariel",
+      recordChanged: false,
+    });
+    expect(written).toHaveLength(1);
   });
 });

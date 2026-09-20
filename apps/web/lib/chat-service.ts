@@ -1,13 +1,28 @@
 import {
   allowedCitationPages,
+  buildEditProposal,
   type ChatContext,
+  type ChatIntent,
   type ChatTurn,
+  type EditProposal,
   type LLMProvider,
+  replaceLiteral,
+  replaceLiteralDeep,
   retrievePages,
   validateCitations,
 } from "@audit/ai";
-import type { ChatMessageRow, ClinicalRecordWithFindings } from "@audit/db";
-import type { DocumentPage, DocumentStatus } from "@audit/domain";
+import type {
+  ChatMessageRow,
+  ClinicalRecordIndex,
+  ClinicalRecordWithFindings,
+} from "@audit/db";
+import {
+  type ClinicalRecord,
+  clinicalRecordSchema,
+  type DocumentPage,
+  type DocumentStatus,
+  type Finding,
+} from "@audit/domain";
 import { errors, ui } from "@audit/lib";
 
 export const MAX_QUESTION_LENGTH = 2000;
@@ -17,9 +32,26 @@ export type ChatDeps = {
   documents: {
     getById(id: string): Promise<{ status: DocumentStatus } | null>;
   };
-  pages: { listForDocument(id: string): Promise<DocumentPage[]> };
+  pages: {
+    listForDocument(id: string): Promise<DocumentPage[]>;
+    getPage(
+      documentId: string,
+      pageNumber: number,
+    ): Promise<DocumentPage | null>;
+    updateText(
+      documentId: string,
+      pageNumber: number,
+      text: string,
+    ): Promise<void>;
+  };
   clinicalRecords: {
     getByDocument(id: string): Promise<ClinicalRecordWithFindings | null>;
+    updateRecord(
+      documentId: string,
+      record: ClinicalRecord,
+      findings: Finding[],
+      indexed: ClinicalRecordIndex,
+    ): Promise<void>;
   };
   chatMessages: {
     listForDocument(id: string): Promise<ChatMessageRow[]>;
@@ -37,7 +69,7 @@ export type ChatErrorCode = "notFound" | "notReady" | "invalid" | "failed";
 export type ChatError = { code: ChatErrorCode; message: string };
 
 export type PrepareResult =
-  | { ok: true; context: ChatContext }
+  | { ok: true; context: ChatContext; pages: DocumentPage[] }
   | { ok: false; error: ChatError };
 
 function toHistory(messages: ChatMessageRow[]): ChatTurn[] {
@@ -88,7 +120,7 @@ export async function prepareChat(
     citedPages: [],
   });
 
-  return { ok: true, context };
+  return { ok: true, context, pages };
 }
 
 export async function* streamReply(
@@ -110,4 +142,116 @@ export async function* streamReply(
     content,
     citedPages,
   });
+}
+
+export type ChatOutcome =
+  | { kind: "question" }
+  | { kind: "proposal"; proposal: EditProposal }
+  | { kind: "message"; content: string };
+
+export async function classifyIntent(
+  deps: ChatDeps,
+  context: ChatContext,
+): Promise<ChatIntent> {
+  try {
+    return await deps.provider.proposeTranscriptionEdit({
+      question: context.question,
+      history: context.history,
+      pages: context.pages,
+    });
+  } catch {
+    return { kind: "question" };
+  }
+}
+
+export function planChatOutcome(
+  pages: DocumentPage[],
+  intent: ChatIntent,
+): ChatOutcome {
+  if (intent.kind === "question") return { kind: "question" };
+  const built = buildEditProposal(pages, intent);
+  if (!built.ok) {
+    return {
+      kind: "message",
+      content: built.reason === "noMatch" ? ui.editNoMatch : ui.editNotLocated,
+    };
+  }
+  return { kind: "proposal", proposal: built.proposal };
+}
+
+export type CorrectionDeps = Pick<ChatDeps, "pages" | "clinicalRecords">;
+
+export type CorrectionResult =
+  | { ok: true; newText: string; recordChanged: boolean }
+  | { ok: false; reason: "notFound" | "noMatch" | "invalid" };
+
+function indexRecord(record: ClinicalRecord): ClinicalRecordIndex {
+  const indexed: ClinicalRecordIndex = {};
+  if (record.patient.name !== undefined) {
+    indexed.patientName = record.patient.name.value;
+  }
+  if (record.hospitalization.admissionDate !== undefined) {
+    indexed.admissionDate = record.hospitalization.admissionDate.value;
+  }
+  if (record.hospitalization.dischargeDate !== undefined) {
+    indexed.dischargeDate = record.hospitalization.dischargeDate.value;
+  }
+  return indexed;
+}
+
+export async function applyTranscriptionCorrection(
+  deps: CorrectionDeps,
+  input: {
+    documentId: string;
+    pageNumber: number;
+    incorrect: string;
+    correct: string;
+  },
+): Promise<CorrectionResult> {
+  const page = await deps.pages.getPage(input.documentId, input.pageNumber);
+  if (!page) return { ok: false, reason: "notFound" };
+
+  const replaced = replaceLiteral(page.text, input.incorrect, input.correct);
+  if (replaced.occurrences === 0) return { ok: false, reason: "noMatch" };
+
+  const clinical = await deps.clinicalRecords.getByDocument(input.documentId);
+  let patchedRecord: ClinicalRecord | null = null;
+  let patchedFindings: Finding[] | null = null;
+  let indexed: ClinicalRecordIndex | null = null;
+  if (clinical !== null) {
+    const recordResult = replaceLiteralDeep(
+      clinical.record,
+      input.incorrect,
+      input.correct,
+    );
+    const findingsResult = replaceLiteralDeep(
+      clinical.findings,
+      input.incorrect,
+      input.correct,
+    );
+    const parsed = clinicalRecordSchema.safeParse(recordResult.value);
+    if (!parsed.success) return { ok: false, reason: "invalid" };
+    patchedRecord = parsed.data as ClinicalRecord;
+    patchedFindings = findingsResult.value as Finding[];
+    indexed = indexRecord(patchedRecord);
+  }
+
+  await deps.pages.updateText(
+    input.documentId,
+    input.pageNumber,
+    replaced.text,
+  );
+  if (clinical !== null && patchedRecord && patchedFindings && indexed) {
+    await deps.clinicalRecords.updateRecord(
+      input.documentId,
+      patchedRecord,
+      patchedFindings,
+      indexed,
+    );
+  }
+  return {
+    ok: true,
+    newText: replaced.text,
+    recordChanged: clinical !== null,
+  };
 }
