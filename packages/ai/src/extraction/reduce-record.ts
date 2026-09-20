@@ -11,21 +11,16 @@ import type {
   Source,
   Study,
 } from "@audit/domain";
+import {
+  type CanonicalHistoryMatch,
+  canonicalHistoryKey,
+  foldForMatch,
+} from "./history-canonical.ts";
 
 type SourceBearing = { sources: Source[] };
 
 function normalize(value: unknown): string {
   return String(value).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function foldForMatch(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function isBlankHistoryValue(value: string): boolean {
@@ -57,6 +52,8 @@ function withinEditDistance(a: string, b: string, max: number): boolean {
 }
 
 type HistoryGroup = {
+  catalogKey?: string;
+  canonicalLabel?: string;
   item: ExtractedValue<string>;
   sourceLists: Source[][];
   variants: string[];
@@ -70,27 +67,38 @@ function mergeHistoryValues(
   for (const record of records) {
     for (const item of select(record)) {
       if (isBlankHistoryValue(item.value)) continue;
-      const canonical = foldForMatch(item.value);
-      if (canonical === "") continue;
-      const group = groups.find((candidate) =>
-        candidate.variants.some((variant) =>
-          withinEditDistance(variant, canonical, 1),
-        ),
-      );
+      const match: CanonicalHistoryMatch = canonicalHistoryKey(item.value);
+      const folded = foldForMatch(item.value);
+      const group =
+        match.kind === "catalog"
+          ? groups.find((candidate) => candidate.catalogKey === match.key)
+          : groups.find(
+              (candidate) =>
+                candidate.catalogKey === undefined &&
+                candidate.variants.some((variant) =>
+                  withinEditDistance(variant, match.normalized, 1),
+                ),
+            );
       if (group !== undefined) {
         group.sourceLists.push(item.sources);
-        if (!group.variants.includes(canonical)) group.variants.push(canonical);
+        if (!group.variants.includes(folded)) group.variants.push(folded);
       } else {
         groups.push({
+          ...(match.kind === "catalog"
+            ? { catalogKey: match.key, canonicalLabel: match.label }
+            : {}),
           item,
           sourceLists: [item.sources],
-          variants: [canonical],
+          variants: [folded],
         });
       }
     }
   }
   return groups.map((group) => ({
     ...group.item,
+    ...(group.canonicalLabel !== undefined
+      ? { value: group.canonicalLabel }
+      : {}),
     sources: unionSources(group.sourceLists),
   }));
 }

@@ -422,10 +422,49 @@ describe("reduceRecords", () => {
     const merged = reduceRecords(records);
 
     expect(merged.history.allergies).toHaveLength(1);
-    expect(merged.history.allergies[0]?.value).toBe("Peniclina");
+    expect(merged.history.allergies[0]?.value).toBe("Penicilina");
     expect(
       merged.history.allergies[0]?.sources.map((s) => s.pageNumber),
     ).toEqual([1, 2, 3]);
+  });
+
+  test("canonicalizes noisy allergy variants into one entry", () => {
+    const values = ["PENICILINA", "A PENICILINA"];
+    const records = values.map((value, index) => {
+      const record = emptyClinicalRecord();
+      record.history.allergies = [extracted(value, index + 1)];
+      return record;
+    });
+
+    const merged = reduceRecords(records);
+
+    expect(merged.history.allergies).toHaveLength(1);
+    expect(merged.history.allergies[0]?.value).toBe("Penicilina");
+    expect(
+      merged.history.allergies[0]?.sources.map((s) => s.pageNumber),
+    ).toEqual([1, 2]);
+  });
+
+  test("canonicalizes OCR-corrupted history variants into one entry", () => {
+    const values = [
+      "MEDICAMENTOS",
+      "A MEDICAMENTOS",
+      "A MEDICANE AENTOS:A MEDICAMENTOS: _ Al",
+      "A ME IOAMENTOS",
+    ];
+    const records = values.map((value, index) => {
+      const record = emptyClinicalRecord();
+      record.history.pathological = [extracted(value, index + 1)];
+      return record;
+    });
+
+    const merged = reduceRecords(records);
+
+    expect(merged.history.pathological).toHaveLength(1);
+    expect(merged.history.pathological[0]?.value).toBe("Medicamentos");
+    expect(
+      merged.history.pathological[0]?.sources.map((s) => s.pageNumber),
+    ).toEqual([1, 2, 3, 4]);
   });
 
   test("keeps distinct history values that are not near-identical", () => {
