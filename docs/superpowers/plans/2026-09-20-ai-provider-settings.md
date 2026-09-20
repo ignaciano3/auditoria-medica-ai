@@ -1359,7 +1359,6 @@ Create `packages/documents/src/ocr/factory.test.ts`:
 import { describe, expect, test } from "bun:test";
 import type { ProviderSettings } from "@audit/domain";
 import { createOcrProviders, resolveOcrVisionConfig } from "./factory.ts";
-import { LocalPageClassifier } from "./local-page-classifier.ts";
 import { OpenAIVisionOCRProvider } from "./openai-ocr-provider.ts";
 import { TesseractOCRProvider } from "./tesseract-ocr-provider.ts";
 
@@ -1619,7 +1618,10 @@ describe("OpenAIVisionOCRProvider default headers", () => {
         "x-opencode-session": "document:abc",
       },
     });
-    await provider.classify({ dataUrl: "data:image/png;base64,AAAA" } as never);
+    await provider.classifyPage({
+      pageNumber: 1,
+      png: new Uint8Array([137, 80, 78, 71]),
+    });
     expect(constructedClients[0]?.defaultHeaders).toEqual({
       "User-Agent": "auditoria-medica-ai/1.0",
       "x-opencode-session": "document:abc",
@@ -1628,7 +1630,7 @@ describe("OpenAIVisionOCRProvider default headers", () => {
 });
 ```
 
-Before running, read `packages/documents/src/ocr/openai-ocr-provider.ts` to confirm the public method name and argument shape used to trigger client construction (it may be `classify` taking a page image). Adjust the call to match the real interface; the goal is only to force the lazy client to be built.
+The public method is confirmed as `classifyPage(input: PageImage)` where `PageImage` is `{ pageNumber: number; png: Uint8Array }`; calling it forces the lazy client to be built. The mock returns a valid classification JSON so the call resolves.
 
 - [ ] **Step 6: Export the factory from the documents index**
 
