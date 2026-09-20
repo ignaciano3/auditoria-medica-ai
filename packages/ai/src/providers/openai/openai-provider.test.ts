@@ -149,6 +149,54 @@ describe("OpenAIProvider.analyzeClinicalRecord", () => {
   });
 });
 
+async function collect(iterable: AsyncIterable<string>): Promise<string> {
+  let text = "";
+  for await (const chunk of iterable) text += chunk;
+  return text;
+}
+
+function streamingClient(chunks: string[]): {
+  client: OpenAICompatibleClient;
+  requests: Array<Record<string, unknown>>;
+} {
+  const requests: Array<Record<string, unknown>> = [];
+  const client: OpenAICompatibleClient = {
+    chat: {
+      completions: {
+        create: async (input) => {
+          requests.push(input);
+          return (async function* () {
+            for (const chunk of chunks) {
+              yield { choices: [{ delta: { content: chunk } }] };
+            }
+          })();
+        },
+      },
+    },
+  };
+  return { client, requests };
+}
+
+describe("OpenAIProvider.answerClinicalQuestion", () => {
+  const context = {
+    documentId: "d1",
+    record: validRecord,
+    findings: [],
+    pages: [{ pageNumber: 5, text: "Levofloxacina", score: 1 }],
+    history: [],
+    question: "¿Qué antibiótico recibió?",
+  } as Parameters<OpenAIProvider["answerClinicalQuestion"]>[0];
+
+  test("streams the answer chunks in order with stream: true", async () => {
+    const fake = streamingClient(["Tomó ", "levofloxacina [p.5]."]);
+    const text = await collect(
+      provider(fake.client).answerClinicalQuestion(context),
+    );
+    expect(text).toBe("Tomó levofloxacina [p.5].");
+    expect(fake.requests[0]?.stream).toBe(true);
+  });
+});
+
 describe("OpenAIProvider summaries", () => {
   const record = validRecord as Parameters<
     OpenAIProvider["generateClinicalSummary"]
