@@ -1,10 +1,23 @@
 import { describe, expect, test } from "bun:test";
+import type { ProviderKey } from "@audit/domain";
 import { type Env, errors } from "@audit/lib";
 import {
   describeSettingsView,
   missingEffectiveKey,
   validateSettingsInput,
 } from "./settings-view.ts";
+
+function configuredKeys(
+  overrides: Partial<Record<ProviderKey, boolean>> = {},
+): Record<ProviderKey, boolean> {
+  return {
+    openai: false,
+    deepseek: false,
+    qwen: false,
+    opencode: false,
+    ...overrides,
+  };
+}
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
@@ -80,28 +93,40 @@ describe("missingEffectiveKey", () => {
   test("returns null when an incoming key is provided", () => {
     const result = missingEffectiveKey(
       { ...BASE, keys: { opencode: "go-test" } },
-      makeEnv(),
+      configuredKeys(),
     );
     expect(result).toBeNull();
   });
 
-  test("returns the provider when no incoming or env key exists", () => {
-    const result = missingEffectiveKey({ ...BASE, keys: {} }, makeEnv());
+  test("returns the provider when no incoming or configured key exists", () => {
+    const result = missingEffectiveKey({ ...BASE, keys: {} }, configuredKeys());
     expect(result).toBe("opencode");
   });
 
-  test("uses the env fallback key", () => {
+  test("honors an already-configured stored key with no incoming value", () => {
     const result = missingEffectiveKey(
       { ...BASE, keys: {} },
-      makeEnv({ OPENCODE_API_KEY: "env-opencode" }),
+      configuredKeys({ opencode: true }),
     );
     expect(result).toBeNull();
   });
 
-  test("treats clearKeys without a replacement as missing", () => {
+  test("honors a configured key derived from the env fallback", () => {
+    const view = describeSettingsView(
+      null,
+      makeEnv({ OPENCODE_API_KEY: "env-opencode" }),
+    );
+    const result = missingEffectiveKey(
+      { ...BASE, keys: {} },
+      view.configuredKeys,
+    );
+    expect(result).toBeNull();
+  });
+
+  test("treats clearKeys without a replacement as missing even when configured", () => {
     const result = missingEffectiveKey(
       { ...BASE, keys: {}, clearKeys: ["opencode"] },
-      makeEnv({ OPENCODE_API_KEY: "env-opencode" }),
+      configuredKeys({ opencode: true }),
     );
     expect(result).toBe("opencode");
   });
@@ -115,7 +140,7 @@ describe("missingEffectiveKey", () => {
         ocrModel: "anything",
         keys: {},
       },
-      makeEnv(),
+      configuredKeys(),
     );
     expect(result).toBeNull();
   });

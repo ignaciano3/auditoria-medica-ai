@@ -18,6 +18,7 @@ import { saveFindingReview } from "./findings-service.ts";
 import type { ReviewInput } from "./findings-view.ts";
 import { type SaveSettingsResult, saveSettings } from "./settings-service.ts";
 import {
+  describeSettingsView,
   missingEffectiveKey,
   type SettingsInput,
   validateSettingsInput,
@@ -121,6 +122,7 @@ export async function revalidateDocumentData(
 export async function saveAiSettings(
   input: SettingsInput,
 ): Promise<SaveSettingsResult> {
+  const env = getEnv();
   const hasWrites =
     Object.values(input.keys).some(
       (value) => typeof value === "string" && value.trim().length > 0,
@@ -129,7 +131,7 @@ export async function saveAiSettings(
   if (hasWrites) {
     try {
       const key = requireEncryptionKey({
-        SETTINGS_ENCRYPTION_KEY: getEnv().SETTINGS_ENCRYPTION_KEY,
+        SETTINGS_ENCRYPTION_KEY: env.SETTINGS_ENCRYPTION_KEY,
       });
       encrypt = (plaintext) => encryptSecret(plaintext, key);
     } catch {
@@ -143,10 +145,12 @@ export async function saveAiSettings(
   try {
     const validation = validateSettingsInput(input);
     if (!validation.ok) return validation;
-    const missing = missingEffectiveKey(input, getEnv());
+    const container = getContainer();
+    const view = describeSettingsView(await container.appSettings.get(), env);
+    const missing = missingEffectiveKey(input, view.configuredKeys);
     if (missing) return { ok: false, error: settingsMissingKey(missing) };
     const result = await saveSettings(
-      { appSettings: getContainer().appSettings, encrypt },
+      { appSettings: container.appSettings, encrypt },
       input,
     );
     if (result.ok) revalidatePath("/settings");

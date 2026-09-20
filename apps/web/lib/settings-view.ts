@@ -79,25 +79,14 @@ function hasIncomingKey(input: SettingsInput, provider: ProviderKey): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function effectiveKeyPresent(
-  input: SettingsInput,
-  env: Env,
-  provider: ProviderKey,
-): boolean {
-  if (input.clearKeys?.includes(provider)) {
-    return hasIncomingKey(input, provider);
-  }
-  const envValue = env[ENV_KEY_FIELD[provider]];
-  return (
-    hasIncomingKey(input, provider) ||
-    (typeof envValue === "string" && envValue.trim().length > 0)
-  );
-}
-
 export function missingEffectiveKey(
   input: SettingsInput,
-  env: Env,
+  configuredKeys: Record<ProviderKey, boolean>,
 ): ProviderKey | null {
+  const present = (provider: ProviderKey): boolean =>
+    hasIncomingKey(input, provider) ||
+    (!input.clearKeys?.includes(provider) && configuredKeys[provider]);
+
   const required: ProviderKey[] = [];
   if (input.llmProvider !== "heuristic") {
     required.push(input.llmProvider as ProviderKey);
@@ -108,7 +97,7 @@ export function missingEffectiveKey(
     required.push(ocrProvider as ProviderKey);
   }
   for (const provider of required) {
-    if (!effectiveKeyPresent(input, env, provider)) return provider;
+    if (!present(provider)) return provider;
   }
   return null;
 }
