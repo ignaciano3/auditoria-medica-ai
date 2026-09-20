@@ -43,6 +43,12 @@ export {
   studySchema,
 } from "./clinical-record.ts";
 export {
+  compareNormalizedDates,
+  hospitalizationDurationDays,
+  type NormalizedDate,
+  normalizeDate,
+} from "./dates.ts";
+export {
   type Document,
   type DocumentPage,
   type DocumentStatus,
@@ -69,3 +75,15 @@ export type {
   Source,
   TextBlock,
 } from "./source.ts";
+export {
+  type AuditSummary,
+  buildAuditSummary,
+  buildClinicalSummary,
+  type ClinicalSummary,
+} from "./summary.ts";
+export {
+  buildTimeline,
+  type TimelineDetail,
+  type TimelineEntry,
+  type TimelineGroup,
+} from "./timeline.ts";

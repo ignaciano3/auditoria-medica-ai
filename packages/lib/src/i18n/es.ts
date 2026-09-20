@@ -265,3 +265,30 @@ export const medicationStatusLabels: Record<MedicationStatus, string> = {
   stopped: "Suspendida",
   unknown: "Desconocida",
 };
+
+export const timeline = {
+  admission: "Ingreso",
+  discharge: "Egreso",
+  startPrefix: "Inicio de",
+  stopPrefix: "Fin de",
+  undated: "Sin fecha",
+  empty: "Sin eventos documentados.",
+  microbiologyFallback: "Resultado de microbiología",
+} as const;
+
+export const summary = {
+  duration: "Duración",
+  durationDays: (days: number) => `${days} días`,
+  evolution: "Evolución",
+  auditTitle: "Resumen de auditoría",
+  documentedFacts: "Hechos documentados",
+  inconsistencies: "Inconsistencias detectadas",
+  documentationGaps: "Documentación faltante",
+  aiInterpretation: "Interpretación de IA",
+  requiresHumanReview: "Requiere revisión humana",
+  reviewCount: (count: number) => `${count} elementos requieren revisión`,
+  majorEvents: "Eventos principales",
+  majorTreatments: "Tratamientos principales",
+  treatmentChanges: "Cambios de tratamiento",
+  relevantStudies: "Estudios relevantes",
+} as const;
