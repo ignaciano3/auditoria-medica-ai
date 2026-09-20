@@ -180,14 +180,15 @@ export function SettingsForm({
           </Callout>
         ) : null}
         {(Object.keys(KEY_LABELS) as KeyField[]).map((provider) => (
-          <label key={provider} className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">
+          <div key={provider} className="flex flex-col gap-1 text-sm">
+            <label className="font-medium" htmlFor={`key-${provider}`}>
               {KEY_LABELS[provider]}
               {initial.configuredKeys[provider]
                 ? ` · ${settings.configured}`
                 : ""}
-            </span>
+            </label>
             <input
+              id={`key-${provider}`}
               className="h-10 rounded-md border border-border bg-surface px-3"
               type="password"
               autoComplete="off"
@@ -198,7 +199,7 @@ export function SettingsForm({
               }
             />
             {initial.configuredKeys[provider] ? (
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={clearKeys.includes(provider)}
@@ -211,9 +212,9 @@ export function SettingsForm({
                   }
                 />
                 {settings.clearKey}
-              </span>
+              </label>
             ) : null}
-          </label>
+          </div>
         ))}
       </Card>
 
