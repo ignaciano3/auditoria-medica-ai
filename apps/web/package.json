@@ -13,6 +13,7 @@
     "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
+    "@audit/ai": "workspace:*",
     "@audit/db": "workspace:*",
     "@audit/domain": "workspace:*",
     "@audit/lib": "workspace:*",
