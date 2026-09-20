@@ -69,6 +69,14 @@ export function pageProgress(processed: number, total: number): string {
   return `${processed} de ${total} páginas transcritas`;
 }
 
+export function editProposalPage(page: number): string {
+  return `Página ${page}`;
+}
+
+export function editProposalOccurrences(count: number): string {
+  return count === 1 ? "1 reemplazo" : `${count} reemplazos`;
+}
+
 export function failedPagesIndicator(pages: number[]): string {
   return `Páginas con error: ${pages.join(", ")}`;
 }
@@ -251,6 +259,17 @@ export const ui = {
   chatNotReady:
     "El documento todavía se está procesando. Vas a poder preguntar cuando esté listo.",
   chatInvalid: "La pregunta no es válida.",
+  editProposalTitle: "Corrección de transcripción",
+  editConfirm: "Confirmar",
+  editCancel: "Cancelar",
+  editApplying: "Aplicando…",
+  editApplied: "Listo. Corregí la transcripción y el registro.",
+  editCancelled: "Corrección cancelada.",
+  editNotLocated:
+    "No pude identificar con certeza dónde corregir. Indicá la página y el texto exacto.",
+  editNoMatch:
+    "El texto indicado ya no coincide con la página. Reintentá la corrección.",
+  editFailed: "No se pudo aplicar la corrección. Intentá de nuevo.",
   incompleteAnalysis: "Análisis incompleto",
   theme: "Tema",
   themeLight: "Claro",
