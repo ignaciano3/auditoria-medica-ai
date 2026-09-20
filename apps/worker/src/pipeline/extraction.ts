@@ -2,6 +2,7 @@ import {
   chunkPages,
   type LLMProvider,
   mapExtract,
+  type RetryOptions,
   reduceRecords,
   stampFindingProvenance,
   stampProvenance,
@@ -56,6 +57,7 @@ export type ExtractionDeps = {
     ): Promise<void>;
   };
   logger?: ProcessingLogger;
+  retry?: RetryOptions;
 };
 
 export async function runExtraction(
@@ -83,9 +85,16 @@ export async function runExtraction(
   const chunks = chunkPages(pages);
   let failedChunks = 0;
   const records = await mapExtract(chunks, deps.provider, {
-    onChunkError: (chunkIndex) => {
+    ...deps.retry,
+    onChunkError: (chunkIndex, error) => {
       failedChunks += 1;
-      logger.error({ event: "chunk_failed", documentId, chunkIndex });
+      logger.error({
+        event: "chunk_failed",
+        documentId,
+        chunkIndex,
+        errorName: error instanceof Error ? error.name : undefined,
+        message: error instanceof Error ? error.message : String(error),
+      });
     },
   });
   if (chunks.length > 0 && failedChunks === chunks.length) {

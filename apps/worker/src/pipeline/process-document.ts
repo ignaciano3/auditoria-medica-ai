@@ -1,4 +1,4 @@
-import type { LLMProvider } from "@audit/ai";
+import type { LLMProvider, RetryOptions } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import {
   classifyPage,
@@ -70,6 +70,7 @@ export type ProcessDocumentDeps = {
   clinicalRecords: ClinicalRecordsDependency;
   render?: RenderPages;
   logger?: ProcessingLogger;
+  retry?: RetryOptions;
 };
 
 function pageImageKey(documentId: string, pageNumber: number): string {

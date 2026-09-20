@@ -1,4 +1,4 @@
-import type { LLMProvider } from "@audit/ai";
+import type { LLMProvider, RetryOptions } from "@audit/ai";
 import type { ClinicalRecordIndex } from "@audit/db";
 import type {
   ClinicalRecord,
@@ -40,6 +40,7 @@ export type ExtractDocumentDeps = {
     ): Promise<void>;
   };
   logger?: ProcessingLogger;
+  retry?: RetryOptions;
 };
 
 export function createExtractDocument(deps: ExtractDocumentDeps) {

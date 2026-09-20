@@ -89,6 +89,7 @@ function makeDeps(
         Promise.resolve(options.pages ?? [visionPage, skippedPage]),
     },
     provider,
+    retry: { sleep: () => Promise.resolve() },
     clinicalRecords: {
       upsert: (documentId, _record, findings) => {
         upserted.push({ documentId, findings });

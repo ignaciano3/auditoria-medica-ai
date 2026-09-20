@@ -127,7 +127,7 @@ function makeDeps(options: {
   findings?: Finding[];
   analyzeError?: Error;
   extractError?: Error;
-  extractErrorCall?: number;
+  extractErrorFor?: (pages: DocumentPage[]) => boolean;
   existingPages?: DocumentPage[];
 }) {
   const updates: Update[] = [];
@@ -144,7 +144,6 @@ function makeDeps(options: {
   const upserted: Upserted[] = [];
   const extractCalls: DocumentPage[][] = [];
   const analyzeCalls: ClinicalRecord[] = [];
-  let extractCallIndex = 0;
 
   const base = new FakeLLMProvider({
     record: options.record ?? extractedRecord(),
@@ -152,13 +151,11 @@ function makeDeps(options: {
   });
   const provider: LLMProvider = {
     async extractClinicalRecord(pages) {
-      const callIndex = extractCallIndex;
-      extractCallIndex += 1;
       extractCalls.push(pages);
       if (
         options.extractError &&
-        (options.extractErrorCall === undefined ||
-          options.extractErrorCall === callIndex)
+        (options.extractErrorFor === undefined ||
+          options.extractErrorFor(pages))
       ) {
         throw options.extractError;
       }
@@ -228,6 +225,7 @@ function makeDeps(options: {
         }
       : undefined,
     provider,
+    retry: { sleep: () => Promise.resolve() },
     clinicalRecords: {
       upsert: (documentId, record, findings, indexed, extraction) => {
         upserted.push({ documentId, record, findings, indexed, extraction });
@@ -417,24 +415,25 @@ describe("createProcessDocument", () => {
     const last = deps.updates.at(-1);
     expect(last?.status).toBe("error");
     expect(last?.error).toBe(errors.extractionFailed);
-    expect(deps.extractCalls).toHaveLength(1);
+    expect(deps.extractCalls).toHaveLength(3);
     expect(deps.analyzeCalls).toHaveLength(0);
     expect(deps.upserted).toHaveLength(0);
-    expect(
-      deps.errorEvents.some((event) => event.event === "chunk_failed"),
-    ).toBe(true);
+    const chunkFailure = deps.errorEvents.find(
+      (event) => event.event === "chunk_failed",
+    );
+    expect(chunkFailure?.message).toBe("chunk boom");
   });
 
   test("persists a partial record when only some chunks fail", async () => {
     const deps = makeDeps({
       render: () => renderPageCount(5),
       extractError: new Error("chunk boom"),
-      extractErrorCall: 0,
+      extractErrorFor: (pages) => pages.some((page) => page.pageNumber === 1),
     });
 
     await deps.processDocument({ documentId: "d1" });
 
-    expect(deps.extractCalls).toHaveLength(2);
+    expect(deps.extractCalls).toHaveLength(4);
     expect(deps.updates.map((update) => update.status)).toEqual([
       "processing",
       "extracting",
@@ -446,6 +445,30 @@ describe("createProcessDocument", () => {
       extractionIncomplete: true,
       failedChunkCount: 1,
     });
+  });
+
+  test("recovers from a transient chunk failure without a partial record", async () => {
+    const attemptsByChunk = new Map<string, number>();
+    const deps = makeDeps({
+      extractError: new Error("transient boom"),
+      extractErrorFor: (pages) => {
+        const key = pages.map((page) => page.pageNumber).join(",");
+        const attempt = (attemptsByChunk.get(key) ?? 0) + 1;
+        attemptsByChunk.set(key, attempt);
+        return attempt === 1;
+      },
+    });
+
+    await deps.processDocument({ documentId: "d1" });
+
+    expect(deps.upserted).toHaveLength(1);
+    expect(deps.upserted[0]?.extraction).toEqual({
+      extractionIncomplete: false,
+      failedChunkCount: 0,
+    });
+    expect(
+      deps.errorEvents.some((event) => event.event === "chunk_failed"),
+    ).toBe(false);
   });
 
   test("skips non-data-bearing pages with a reason", async () => {

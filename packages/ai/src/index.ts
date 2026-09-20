@@ -27,6 +27,7 @@ export {
   emptyClinicalRecord,
   type MapExtractOptions,
   mapExtract,
+  type RetryOptions,
 } from "./extraction/map-extract.ts";
 export { reduceRecords } from "./extraction/reduce-record.ts";
 export {
