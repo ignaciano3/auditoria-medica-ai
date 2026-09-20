@@ -7,6 +7,11 @@ export function durationText(days: number | undefined): string | undefined {
 
 export function hasClinicalSummaryContent(clinical: ClinicalSummary): boolean {
   return (
+    clinical.patient.name !== undefined ||
+    clinical.patient.age !== undefined ||
+    clinical.patient.sex !== undefined ||
+    clinical.patient.birthDate !== undefined ||
+    clinical.durationDays !== undefined ||
     clinical.admissionDate !== undefined ||
     clinical.dischargeDate !== undefined ||
     clinical.reason !== undefined ||

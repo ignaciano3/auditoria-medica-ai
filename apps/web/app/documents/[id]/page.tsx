@@ -27,6 +27,7 @@ import { getClinicalData } from "../../../lib/cached-data.ts";
 import { getContainer } from "../../../lib/container.ts";
 import { serializeChatMessage } from "../../../lib/serialize-chat-message.ts";
 import { serializeDocument } from "../../../lib/serialize-document.ts";
+import { hasClinicalSummaryContent } from "../../../lib/summary-view.ts";
 
 export default function DocumentDetailPage({
   params,
@@ -124,10 +125,13 @@ async function DocumentContent({
           <p>{doc.error}</p>
         </Callout>
       ) : null}
-      {clinicalSummary !== null ? (
+      {clinicalSummary !== null &&
+      hasClinicalSummaryContent(clinicalSummary) ? (
         <ClinicalSummaryView documentId={doc.id} summary={clinicalSummary} />
       ) : null}
-      <Timeline documentId={doc.id} groups={timelineGroups} />
+      {clinical !== null ? (
+        <Timeline documentId={doc.id} groups={timelineGroups} />
+      ) : null}
       {auditSummary !== null ? (
         <AuditSummaryView documentId={doc.id} summary={auditSummary} />
       ) : null}

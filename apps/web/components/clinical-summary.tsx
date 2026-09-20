@@ -16,6 +16,10 @@ import {
 } from "./clinical-record-primitives.tsx";
 import { EvidenceLinks } from "./evidence-link.tsx";
 
+function hasValue(value: string | number | undefined): boolean {
+  return displayValue(value) !== undefined;
+}
+
 function studySources(study: Study): number[] {
   return mergeSourcePages(
     study.sources,
@@ -90,6 +94,29 @@ export function ClinicalSummaryView({
     },
   ];
 
+  const dischargeFields: RecordFieldSpec[] = [
+    {
+      label: clinicalRecord.conditionAtDischarge,
+      value: summary.discharge?.conditionAtDischarge?.value,
+      sources: summary.discharge?.conditionAtDischarge?.sources ?? [],
+    },
+    {
+      label: clinicalRecord.treatment,
+      value: summary.discharge?.treatment?.value,
+      sources: summary.discharge?.treatment?.sources ?? [],
+    },
+    {
+      label: clinicalRecord.instructions,
+      value: summary.discharge?.instructions?.value,
+      sources: summary.discharge?.instructions?.sources ?? [],
+    },
+    {
+      label: clinicalRecord.followUp,
+      value: summary.discharge?.followUp?.value,
+      sources: summary.discharge?.followUp?.sources ?? [],
+    },
+  ];
+
   const historyGroups: Array<{
     label: string;
     entries: ClinicalSummary["pathological"];
@@ -101,34 +128,48 @@ export function ClinicalSummaryView({
   return (
     <section className="flex flex-col gap-6">
       <CollapsibleSection title={clinicalRecord.patient} defaultOpen>
-        <RecordFields documentId={documentId} fields={patientFields} />
+        {patientFields.some((field) => hasValue(field.value)) ? (
+          <RecordFields documentId={documentId} fields={patientFields} />
+        ) : (
+          <RecordEmpty />
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection title={clinicalRecord.hospitalization} defaultOpen>
-        <RecordFields documentId={documentId} fields={hospitalizationFields} />
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-semibold text-muted-foreground">
-            {clinicalRecord.diagnoses}
-          </h3>
-          {summary.diagnoses.length === 0 ? (
-            <RecordEmpty />
-          ) : (
-            <ul className="flex list-none flex-col gap-1">
-              {summary.diagnoses.map((diagnosis) => (
-                <li
-                  key={diagnosis.value}
-                  className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
-                >
-                  <span>{displayValue(diagnosis.value)}</span>
-                  <EvidenceLinks
-                    documentId={documentId}
-                    pages={sourcePages(diagnosis.sources)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {hospitalizationFields.some((field) => hasValue(field.value)) ||
+        summary.diagnoses.length > 0 ? (
+          <>
+            <RecordFields
+              documentId={documentId}
+              fields={hospitalizationFields}
+            />
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                {clinicalRecord.diagnoses}
+              </h3>
+              {summary.diagnoses.length === 0 ? (
+                <RecordEmpty />
+              ) : (
+                <ul className="flex list-none flex-col gap-1">
+                  {summary.diagnoses.map((diagnosis) => (
+                    <li
+                      key={diagnosis.value}
+                      className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
+                    >
+                      <span>{displayValue(diagnosis.value)}</span>
+                      <EvidenceLinks
+                        documentId={documentId}
+                        pages={sourcePages(diagnosis.sources)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        ) : (
+          <RecordEmpty />
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection title={clinicalRecord.history}>
@@ -181,6 +222,10 @@ export function ClinicalSummaryView({
                     ? entry.detail.description
                     : (entry.date ?? "")}
                 </span>
+                {entry.detail.kind === "documented" &&
+                entry.date !== undefined ? (
+                  <span className="text-muted-foreground">{entry.date}</span>
+                ) : null}
                 <EvidenceLinks
                   documentId={documentId}
                   pages={sourcePages(entry.sources)}
@@ -293,31 +338,11 @@ export function ClinicalSummaryView({
 
       {summary.discharge !== undefined ? (
         <CollapsibleSection title={clinicalRecord.discharge}>
-          <RecordFields
-            documentId={documentId}
-            fields={[
-              {
-                label: clinicalRecord.conditionAtDischarge,
-                value: summary.discharge.conditionAtDischarge?.value,
-                sources: summary.discharge.conditionAtDischarge?.sources ?? [],
-              },
-              {
-                label: clinicalRecord.treatment,
-                value: summary.discharge.treatment?.value,
-                sources: summary.discharge.treatment?.sources ?? [],
-              },
-              {
-                label: clinicalRecord.instructions,
-                value: summary.discharge.instructions?.value,
-                sources: summary.discharge.instructions?.sources ?? [],
-              },
-              {
-                label: clinicalRecord.followUp,
-                value: summary.discharge.followUp?.value,
-                sources: summary.discharge.followUp?.sources ?? [],
-              },
-            ]}
-          />
+          {dischargeFields.some((field) => hasValue(field.value)) ? (
+            <RecordFields documentId={documentId} fields={dischargeFields} />
+          ) : (
+            <RecordEmpty />
+          )}
         </CollapsibleSection>
       ) : null}
     </section>

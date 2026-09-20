@@ -30,6 +30,23 @@ describe("hasClinicalSummaryContent", () => {
     expect(hasClinicalSummaryContent(emptySummary())).toBe(false);
   });
 
+  test("is true when only the patient has content", () => {
+    const summary = emptySummary();
+    summary.patient = {
+      name: {
+        value: "Ana",
+        sources: [{ documentId: "d1", pageNumber: 1, text: "t" }],
+      },
+    };
+    expect(hasClinicalSummaryContent(summary)).toBe(true);
+  });
+
+  test("is true when only the duration is documented", () => {
+    const summary = emptySummary();
+    summary.durationDays = 15;
+    expect(hasClinicalSummaryContent(summary)).toBe(true);
+  });
+
   test("is true when any section has content", () => {
     const summary = emptySummary();
     summary.treatment = [
