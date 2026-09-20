@@ -152,4 +152,45 @@ describe("buildTimeline", () => {
     expect(first[0]?.id.startsWith("evt-")).toBe(true);
     expect(first[0]?.sources).toEqual([source(1)]);
   });
+
+  test("keeps an undated laboratory result as an undated entry with its sources", () => {
+    const record = baseRecord();
+    record.hospitalization.admissionDate = value("13/02/2026", 1);
+    record.laboratory = [
+      {
+        name: value("Hemoglobina", 8),
+        value: value("10.2", 8),
+        sources: [source(8)],
+      },
+    ];
+
+    const groups = buildTimeline(record);
+    const last = groups[groups.length - 1];
+    expect(last?.undated).toBe(true);
+    const entry = last?.entries[0];
+    expect(entry?.type).toBe("laboratory");
+    expect(entry?.sources).toEqual([source(8)]);
+  });
+
+  test("keeps undated study and microbiology results as undated entries", () => {
+    const record = baseRecord();
+    record.studies = [
+      { type: value("Radiografía de tórax", 9), sources: [source(9)] },
+    ];
+    record.microbiology = [
+      { sample: value("Esputo", 10), sources: [source(10)] },
+    ];
+
+    const groups = buildTimeline(record);
+    expect(groups).toHaveLength(1);
+    const last = groups[groups.length - 1];
+    expect(last?.undated).toBe(true);
+    expect(last?.entries.map((entry) => entry.type).sort()).toEqual([
+      "imaging",
+      "microbiology",
+    ]);
+    expect(last?.entries.map((entry) => entry.sources[0])).toEqual(
+      expect.arrayContaining([source(9), source(10)]),
+    );
+  });
 });

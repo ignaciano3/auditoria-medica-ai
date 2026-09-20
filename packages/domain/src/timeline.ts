@@ -114,38 +114,44 @@ function structuredDrafts(record: ClinicalRecord): DraftEntry[] {
     }
   }
   for (const result of laboratory) {
-    if (result.date === undefined) continue;
-    drafts.push(
-      extractedDraft("laboratory", result.date, {
+    drafts.push({
+      type: "laboratory",
+      ...(result.date !== undefined ? { date: result.date.value } : {}),
+      sources: result.date?.sources ?? result.sources,
+      detail: {
         kind: "laboratory",
         name: result.name.value,
         value: result.value.value,
         ...(result.unit !== undefined ? { unit: result.unit.value } : {}),
-      }),
-    );
+      },
+    });
   }
   for (const study of studies) {
-    if (study.date === undefined) continue;
-    drafts.push(
-      extractedDraft("imaging", study.date, {
+    drafts.push({
+      type: "imaging",
+      ...(study.date !== undefined ? { date: study.date.value } : {}),
+      sources: study.date?.sources ?? study.sources,
+      detail: {
         kind: "study",
         studyType: study.type.value,
         ...(study.result !== undefined ? { result: study.result.value } : {}),
-      }),
-    );
+      },
+    });
   }
   for (const result of microbiology) {
-    if (result.date === undefined) continue;
-    drafts.push(
-      extractedDraft("microbiology", result.date, {
+    drafts.push({
+      type: "microbiology",
+      ...(result.date !== undefined ? { date: result.date.value } : {}),
+      sources: result.date?.sources ?? result.sources,
+      detail: {
         kind: "microbiology",
         ...(result.sample !== undefined ? { sample: result.sample.value } : {}),
         ...(result.organism !== undefined
           ? { organism: result.organism.value }
           : {}),
         ...(result.result !== undefined ? { result: result.result.value } : {}),
-      }),
-    );
+      },
+    });
   }
 
   return drafts;
