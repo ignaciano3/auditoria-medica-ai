@@ -8,6 +8,14 @@ import {
 import OpenAI from "openai";
 import { z } from "zod";
 import {
+  buildEditProposalUserPrompt,
+  type ChatIntent,
+  chatIntentSchema,
+  EDIT_PROPOSAL_CORRECTION_PROMPT,
+  EDIT_PROPOSAL_SYSTEM_PROMPT,
+  type EditProposalInput,
+} from "../../chat/edit-proposal.ts";
+import {
   buildChatUserPrompt,
   CHAT_SYSTEM_PROMPT,
   type ChatContext,
@@ -90,6 +98,11 @@ function parseClinicalRecord(
 function parseFindings(content: string | null): Finding[] | undefined {
   const parsed = parseValidated(z.array(findingSchema), content);
   return parsed.ok ? (parsed.data as Finding[]) : undefined;
+}
+
+function parseChatIntent(content: string | null): ChatIntent | undefined {
+  const parsed = parseValidated(chatIntentSchema, content);
+  return parsed.ok ? parsed.data : undefined;
 }
 
 export class OpenAIProvider implements LLMProvider {
@@ -276,6 +289,19 @@ export class OpenAIProvider implements LLMProvider {
     yield* this.completeStream(
       CHAT_SYSTEM_PROMPT,
       buildChatUserPrompt(context),
+    );
+  }
+
+  async proposeTranscriptionEdit(
+    input: EditProposalInput,
+  ): Promise<ChatIntent> {
+    return this.completeValidated(
+      parseChatIntent,
+      "proposeTranscriptionEdit",
+      EDIT_PROPOSAL_SYSTEM_PROMPT,
+      buildEditProposalUserPrompt(input),
+      EDIT_PROPOSAL_CORRECTION_PROMPT,
+      true,
     );
   }
 }

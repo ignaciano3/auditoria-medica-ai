@@ -3,6 +3,8 @@ import {
   clinicalRecord,
   deleteConfirm,
   documentStatusLabels,
+  editProposalOccurrences,
+  editProposalPage,
   errors,
   failedChunksIndicator,
   failedPagesIndicator,
@@ -126,6 +128,23 @@ describe("ui viewer and chat labels", () => {
     expect(ui.chatError.length).toBeGreaterThan(0);
     expect(ui.chatNotReady.length).toBeGreaterThan(0);
     expect(ui.chatInvalid.length).toBeGreaterThan(0);
+  });
+
+  test("provides transcription correction copy", () => {
+    expect(ui.editProposalTitle.length).toBeGreaterThan(0);
+    expect(ui.editConfirm.length).toBeGreaterThan(0);
+    expect(ui.editCancel.length).toBeGreaterThan(0);
+    expect(ui.editApplied.length).toBeGreaterThan(0);
+    expect(ui.editCancelled.length).toBeGreaterThan(0);
+    expect(ui.editNotLocated.length).toBeGreaterThan(0);
+    expect(ui.editNoMatch.length).toBeGreaterThan(0);
+    expect(ui.editFailed.length).toBeGreaterThan(0);
+  });
+
+  test("formats the correction page and occurrence count", () => {
+    expect(editProposalPage(3)).toBe("Página 3");
+    expect(editProposalOccurrences(1)).toBe("1 reemplazo");
+    expect(editProposalOccurrences(2)).toBe("2 reemplazos");
   });
 });
 

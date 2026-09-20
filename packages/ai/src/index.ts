@@ -7,6 +7,21 @@ export {
   validateCitations,
 } from "./chat/citations.ts";
 export {
+  buildEditProposal,
+  buildEditProposalUserPrompt,
+  type ChatIntent,
+  chatIntentSchema,
+  EDIT_PROPOSAL_CORRECTION_PROMPT,
+  EDIT_PROPOSAL_SYSTEM_PROMPT,
+  type EditProposal,
+  type EditProposalInput,
+  escapeRegExp,
+  replaceLiteral,
+  replaceLiteralDeep,
+  resolveTargetPage,
+  type TranscriptionEditIntent,
+} from "./chat/edit-proposal.ts";
+export {
   buildChatUserPrompt,
   CHAT_SYSTEM_PROMPT,
   type ChatContext,

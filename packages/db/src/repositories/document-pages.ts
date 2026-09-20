@@ -114,5 +114,20 @@ export function createDocumentPageRepository(db: Database) {
           ),
         );
     },
+    async updateText(
+      documentId: string,
+      pageNumber: number,
+      text: string,
+    ): Promise<void> {
+      await db
+        .update(documentPages)
+        .set({ text })
+        .where(
+          and(
+            eq(documentPages.documentId, documentId),
+            eq(documentPages.pageNumber, pageNumber),
+          ),
+        );
+    },
   };
 }

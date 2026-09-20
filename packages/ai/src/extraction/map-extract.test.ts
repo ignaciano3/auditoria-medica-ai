@@ -64,6 +64,10 @@ class ScriptedProvider implements LLMProvider {
   async *answerClinicalQuestion(): AsyncIterable<string> {
     yield "";
   }
+
+  async proposeTranscriptionEdit() {
+    return { kind: "question" } as const;
+  }
 }
 
 describe("mapExtract", () => {

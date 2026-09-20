@@ -1,14 +1,22 @@
 "use client";
 
 import { ui } from "@audit/lib/i18n";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { applyPageTranscriptionCorrection } from "../lib/actions.ts";
 import { renderChatContent } from "../lib/chat-markdown.tsx";
 import type { ChatMessageView } from "../lib/serialize-chat-message.ts";
+import {
+  TranscriptionEditCard,
+  type TranscriptionEditView,
+} from "./transcription-edit-card.tsx";
 import { Button } from "./ui/button.tsx";
 
 type StreamPayload =
   | { delta: string }
   | { done: true; message: ChatMessageView }
+  | { proposal: TranscriptionEditView }
+  | { message: ChatMessageView }
   | { error: string };
 
 export function ChatPanel({
@@ -24,6 +32,10 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [proposal, setProposal] = useState<TranscriptionEditView | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to the newest message whenever the thread changes
@@ -36,6 +48,8 @@ export function ChatPanel({
       const trimmed = question.trim();
       if (trimmed.length === 0 || sending) return;
       setError(null);
+      setEditError(null);
+      setProposal(null);
       setSending(true);
       setInput("");
       const userMessage: ChatMessageView = {
@@ -62,7 +76,7 @@ export function ChatPanel({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        let sawDone = false;
+        let settled = false;
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
@@ -81,8 +95,19 @@ export function ChatPanel({
                     : message,
                 ),
               );
+            } else if ("proposal" in payload) {
+              settled = true;
+              setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+              setProposal(payload.proposal);
             } else if ("done" in payload) {
-              sawDone = true;
+              settled = true;
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantId ? payload.message : message,
+                ),
+              );
+            } else if ("message" in payload) {
+              settled = true;
               setMessages((prev) =>
                 prev.map((message) =>
                   message.id === assistantId ? payload.message : message,
@@ -93,7 +118,7 @@ export function ChatPanel({
             }
           }
         }
-        if (!sawDone) throw new Error(ui.chatError);
+        if (!settled) throw new Error(ui.chatError);
       } catch {
         setError(ui.chatError);
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
@@ -103,6 +128,54 @@ export function ChatPanel({
     },
     [documentId, sending],
   );
+
+  const confirmEdit = useCallback(async () => {
+    if (proposal === null || applying) return;
+    setApplying(true);
+    setEditError(null);
+    try {
+      const result = await applyPageTranscriptionCorrection({
+        documentId,
+        pageNumber: proposal.pageNumber,
+        incorrect: proposal.incorrect,
+        correct: proposal.correct,
+      });
+      if (!result.ok) {
+        setEditError(result.error);
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `local-applied-${Date.now()}`,
+          role: "assistant",
+          content: ui.editApplied,
+          citedPages: [],
+        },
+      ]);
+      setProposal(null);
+      router.refresh();
+    } catch {
+      setEditError(ui.editFailed);
+    } finally {
+      setApplying(false);
+    }
+  }, [proposal, applying, documentId, router]);
+
+  const cancelEdit = useCallback(() => {
+    if (applying) return;
+    setProposal(null);
+    setEditError(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local-cancelled-${Date.now()}`,
+        role: "assistant",
+        content: ui.editCancelled,
+        citedPages: [],
+      },
+    ]);
+  }, [applying]);
 
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
@@ -144,6 +217,15 @@ export function ChatPanel({
             />
           ))
         )}
+        {proposal !== null ? (
+          <TranscriptionEditCard
+            proposal={proposal}
+            applying={applying}
+            error={editError}
+            onConfirm={() => void confirmEdit()}
+            onCancel={cancelEdit}
+          />
+        ) : null}
         {sending ? (
           <p className="text-xs text-muted-foreground">{ui.chatThinking}</p>
         ) : null}

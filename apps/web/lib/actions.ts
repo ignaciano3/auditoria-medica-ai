@@ -6,9 +6,11 @@ import {
   getEnv,
   requireEncryptionKey,
   settingsMissingKey,
+  ui,
 } from "@audit/lib";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { DOCUMENTS_TAG, documentTag, SETTINGS_TAG } from "./cache-tags.ts";
+import { applyTranscriptionCorrection } from "./chat-service.ts";
 import { getContainer } from "./container.ts";
 import {
   createUploadedDocument,
@@ -161,4 +163,35 @@ export async function saveAiSettings(
   } catch {
     return { ok: false, error: errors.settingsSaveFailed };
   }
+}
+
+export type ApplyTranscriptionCorrectionResult =
+  | { ok: true; newText: string; recordChanged: boolean }
+  | { ok: false; error: string };
+
+export async function applyPageTranscriptionCorrection(input: {
+  documentId: string;
+  pageNumber: number;
+  incorrect: string;
+  correct: string;
+}): Promise<ApplyTranscriptionCorrectionResult> {
+  let result: Awaited<ReturnType<typeof applyTranscriptionCorrection>>;
+  try {
+    result = await applyTranscriptionCorrection(getContainer(), input);
+  } catch {
+    return { ok: false, error: ui.editFailed };
+  }
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.reason === "noMatch" ? ui.editNoMatch : ui.editFailed,
+    };
+  }
+  revalidateTag(documentTag(input.documentId), "max");
+  revalidatePath("/documents/[id]", "page");
+  return {
+    ok: true,
+    newText: result.newText,
+    recordChanged: result.recordChanged,
+  };
 }

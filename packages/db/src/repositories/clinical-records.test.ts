@@ -112,4 +112,32 @@ maybe("clinical records repository", () => {
     );
     expect(fetched).toBeNull();
   });
+
+  test("updates the record and findings without touching completeness", async () => {
+    const document = await documents.create({
+      originalFilename: "corregida.pdf",
+      originalKey: "documents/corregida/original.pdf",
+    });
+    createdId = document.id;
+
+    await repo.upsert(
+      document.id,
+      record(),
+      findings,
+      { patientName: "Ana" },
+      { extractionIncomplete: true, failedChunkCount: 2 },
+    );
+
+    const patched: ClinicalRecord = {
+      ...record(),
+      patient: { name: { value: "Ariel", sources: [source] } },
+    };
+    await repo.updateRecord(document.id, patched, [], { patientName: "Ariel" });
+
+    const fetched = await repo.getByDocument(document.id);
+    expect(fetched?.record.patient.name?.value).toBe("Ariel");
+    expect(fetched?.findings).toEqual([]);
+    expect(fetched?.extractionIncomplete).toBe(true);
+    expect(fetched?.failedChunkCount).toBe(2);
+  });
 });

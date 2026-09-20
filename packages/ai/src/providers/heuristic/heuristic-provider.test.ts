@@ -180,6 +180,17 @@ describe("HeuristicLLMProvider", () => {
   });
 });
 
+test("always classifies messages as questions", async () => {
+  const provider = new HeuristicLLMProvider();
+  await expect(
+    provider.proposeTranscriptionEdit({
+      question: "corregi Ansel por Ariel",
+      history: [],
+      pages: [],
+    }),
+  ).resolves.toEqual({ kind: "question" });
+});
+
 test("answers with a page citation when a page is retrieved", async () => {
   const provider = new HeuristicLLMProvider();
   let text = "";
