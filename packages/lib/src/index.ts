@@ -1,3 +1,9 @@
+export {
+  decryptSecret,
+  encryptSecret,
+  parseEncryptionKey,
+  requireEncryptionKey,
+} from "./crypto/secrets.ts";
 export { type Env, getEnv, parseEnv } from "./env.ts";
 export {
   clinicalRecord,
