@@ -41,6 +41,7 @@ function fakeProvider(chunks: string[]): LLMProvider {
     answerClinicalQuestion: async function* () {
       for (const chunk of chunks) yield chunk;
     },
+    proposeTranscriptionEdit: () => Promise.resolve({ kind: "question" }),
   };
 }
 

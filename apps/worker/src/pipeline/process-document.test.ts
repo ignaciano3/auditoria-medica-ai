@@ -172,6 +172,7 @@ function makeDeps(options: {
     async *answerClinicalQuestion() {
       yield "";
     },
+    proposeTranscriptionEdit: async () => ({ kind: "question" }),
   };
 
   const processDocument = createProcessDocument({

@@ -1,4 +1,5 @@
 import type { ClinicalRecord, DocumentPage, Finding } from "@audit/domain";
+import type { ChatIntent, EditProposalInput } from "./chat/edit-proposal.ts";
 import type { ChatContext } from "./chat/prompts.ts";
 
 export interface LLMProvider {
@@ -10,4 +11,5 @@ export interface LLMProvider {
     findings: Finding[],
   ): Promise<string>;
   answerClinicalQuestion(context: ChatContext): AsyncIterable<string>;
+  proposeTranscriptionEdit(input: EditProposalInput): Promise<ChatIntent>;
 }

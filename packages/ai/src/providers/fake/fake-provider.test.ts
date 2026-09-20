@@ -59,6 +59,35 @@ describe("FakeLLMProvider", () => {
   });
 });
 
+test("returns the configured chat intent", async () => {
+  const provider = new FakeLLMProvider({
+    record,
+    intent: { kind: "edit", incorrect: "Ansel", correct: "Ariel" },
+  });
+  await expect(
+    provider.proposeTranscriptionEdit({
+      question: "q",
+      history: [],
+      pages: [],
+    }),
+  ).resolves.toEqual({
+    kind: "edit",
+    incorrect: "Ansel",
+    correct: "Ariel",
+  });
+});
+
+test("defaults the chat intent to a question", async () => {
+  const provider = new FakeLLMProvider({ record });
+  await expect(
+    provider.proposeTranscriptionEdit({
+      question: "q",
+      history: [],
+      pages: [],
+    }),
+  ).resolves.toEqual({ kind: "question" });
+});
+
 test("streams the configured answer", async () => {
   const provider = new FakeLLMProvider({ record, answer: "Respuesta [p.1]" });
   let text = "";

@@ -73,6 +73,7 @@ function makeDeps(
     async *answerClinicalQuestion() {
       yield "";
     },
+    proposeTranscriptionEdit: async () => ({ kind: "question" }),
   };
 
   const deps: ExtractDocumentDeps = {

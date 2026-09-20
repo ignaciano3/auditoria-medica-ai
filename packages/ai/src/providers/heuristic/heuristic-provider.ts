@@ -1,4 +1,8 @@
 import type { ClinicalRecord, DocumentPage, Finding } from "@audit/domain";
+import type {
+  ChatIntent,
+  EditProposalInput,
+} from "../../chat/edit-proposal.ts";
 import {
   type ChatContext,
   INSUFFICIENT_EVIDENCE_REPLY,
@@ -68,5 +72,11 @@ export class HeuristicLLMProvider implements LLMProvider {
       return;
     }
     yield `La documentación analizada contiene información en la página ${page.pageNumber} [p.${page.pageNumber}].`;
+  }
+
+  async proposeTranscriptionEdit(
+    _input: EditProposalInput,
+  ): Promise<ChatIntent> {
+    return { kind: "question" };
   }
 }

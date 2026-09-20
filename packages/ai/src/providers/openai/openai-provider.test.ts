@@ -197,6 +197,45 @@ describe("OpenAIProvider.answerClinicalQuestion", () => {
   });
 });
 
+describe("OpenAIProvider.proposeTranscriptionEdit", () => {
+  test("returns the parsed edit intent with a JSON response format", async () => {
+    const fake = sequencedClient([
+      JSON.stringify({
+        kind: "edit",
+        pageNumber: 3,
+        incorrect: "Ansel",
+        correct: "Ariel",
+      }),
+    ]);
+    const intent = await provider(fake.client).proposeTranscriptionEdit({
+      question: "en la pagina 3 donde dice Ansel es Ariel",
+      history: [],
+      pages: [{ pageNumber: 3, text: "Paciente Ansel", score: 1 }],
+    });
+    expect(intent).toEqual({
+      kind: "edit",
+      pageNumber: 3,
+      incorrect: "Ansel",
+      correct: "Ariel",
+    });
+    expect(fake.requests[0]?.response_format).toEqual({ type: "json_object" });
+  });
+
+  test("rejects short incorrect literals and retries", async () => {
+    const fake = sequencedClient([
+      JSON.stringify({ kind: "edit", incorrect: "a", correct: "b" }),
+      JSON.stringify({ kind: "question" }),
+    ]);
+    const intent = await provider(fake.client).proposeTranscriptionEdit({
+      question: "hola",
+      history: [],
+      pages: [],
+    });
+    expect(intent).toEqual({ kind: "question" });
+    expect(fake.calls()).toBe(2);
+  });
+});
+
 describe("OpenAIProvider summaries", () => {
   const record = validRecord as Parameters<
     OpenAIProvider["generateClinicalSummary"]
