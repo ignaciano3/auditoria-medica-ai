@@ -21,11 +21,51 @@ export function isPlaceholderValue(value: string): boolean {
   return !/[\p{L}\p{N}]/u.test(text);
 }
 
-export function medicationItemKey(
-  medication: Medication,
+export function foldText(value: string | undefined): string | undefined {
+  const text = displayValue(value);
+  if (text === undefined) return undefined;
+  const folded = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  return folded === "" ? undefined : folded;
+}
+
+export type MedicationGroup = {
+  name: string | undefined;
+  medications: Medication[];
+};
+
+export function groupMedications(medications: Medication[]): MedicationGroup[] {
+  const groups: MedicationGroup[] = [];
+  const named = new Map<string, MedicationGroup>();
+
+  for (const medication of medications) {
+    const name = displayValue(medication.name.value);
+    const key = foldText(name);
+    if (key === undefined) {
+      groups.push({ name, medications: [medication] });
+      continue;
+    }
+    let group = named.get(key);
+    if (group === undefined) {
+      group = { name, medications: [] };
+      named.set(key, group);
+      groups.push(group);
+    }
+    group.medications.push(medication);
+  }
+
+  return groups;
+}
+
+export function medicationGroupItemKey(
+  group: MedicationGroup,
   index: number,
 ): string {
-  return `${displayValue(medication.name.value) ?? "medication"}-${index}`;
+  return `${group.name ?? "medication"}-${index}`;
 }
 
 export function labResultItemKey(result: LabResult, index: number): string {
@@ -93,8 +133,8 @@ export function countsBySection(record: ClinicalRecord): SectionCounts {
   return {
     pathological: record.history.pathological.length,
     allergies: record.history.allergies.length,
-    usualMedications: record.history.usualMedications.length,
-    medications: record.medications.length,
+    usualMedications: groupMedications(record.history.usualMedications).length,
+    medications: groupMedications(record.medications).length,
     laboratory: record.laboratory.length,
     studies: record.studies.length,
     microbiology: record.microbiology.length,

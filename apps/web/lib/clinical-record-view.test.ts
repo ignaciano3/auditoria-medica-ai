@@ -12,10 +12,12 @@ import {
   dateConflictItemKey,
   diagnosisItemKey,
   displayValue,
+  foldText,
+  groupMedications,
   historyEntryItemKey,
   isPlaceholderValue,
   labResultItemKey,
-  medicationItemKey,
+  medicationGroupItemKey,
   mergeSourcePages,
   microbiologyItemKey,
   sourcePages,
@@ -61,14 +63,86 @@ describe("displayValue", () => {
   });
 });
 
-describe("list item keys", () => {
-  test("disambiguates medications that share a name", () => {
-    const medication = (): Medication => ({
-      name: { value: "RESULTADO", sources: [source(1)] },
+describe("foldText", () => {
+  test("lowercases, strips diacritics and collapses whitespace", () => {
+    expect(foldText("  Levofloxacina  ")).toBe("levofloxacina");
+    expect(foldText("Neumonía")).toBe("neumonia");
+    expect(foldText("E.  Coli")).toBe("e. coli");
+  });
+
+  test("returns undefined for blank values", () => {
+    expect(foldText(undefined)).toBeUndefined();
+    expect(foldText("   ")).toBeUndefined();
+  });
+});
+
+describe("groupMedications", () => {
+  function medication(
+    name: string,
+    extra: Partial<Medication> = {},
+  ): Medication {
+    return {
+      name: { value: name, sources: [source(1)] },
       sources: [source(1)],
-    });
-    expect(medicationItemKey(medication(), 0)).not.toBe(
-      medicationItemKey(medication(), 1),
+      ...extra,
+    };
+  }
+
+  test("merges same-name medications regardless of case and accents", () => {
+    const groups = groupMedications([
+      medication("Levofloxacina"),
+      medication("LEVOFLOXACINA"),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.medications).toHaveLength(2);
+    expect(groups[0]?.name).toBe("Levofloxacina");
+  });
+
+  test("merges same-name medications with different route, dates and status", () => {
+    const groups = groupMedications([
+      medication("Levofloxacina", {
+        route: { value: "endovenosa", sources: [source(1)] },
+        startDate: { value: "15/02", sources: [source(1)] },
+        status: "stopped",
+      }),
+      medication("Levofloxacina", {
+        route: { value: "EV", sources: [source(7)] },
+        startDate: { value: "14/2", sources: [source(7)] },
+        status: "active",
+      }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.medications).toHaveLength(2);
+  });
+
+  test("keeps different drug names as separate groups", () => {
+    const groups = groupMedications([
+      medication("Metformina"),
+      medication("Levofloxacina"),
+    ]);
+    expect(groups).toHaveLength(2);
+  });
+
+  test("preserves first-seen order", () => {
+    const groups = groupMedications([
+      medication("B"),
+      medication("A"),
+      medication("B"),
+    ]);
+    expect(groups.map((group) => group.name)).toEqual(["B", "A"]);
+  });
+
+  test("keeps medications without a name as separate groups", () => {
+    const groups = groupMedications([medication(""), medication("")]);
+    expect(groups).toHaveLength(2);
+  });
+});
+
+describe("list item keys", () => {
+  test("disambiguates medication groups that share a name", () => {
+    const group = { name: "Levofloxacina", medications: [] };
+    expect(medicationGroupItemKey(group, 0)).not.toBe(
+      medicationGroupItemKey(group, 1),
     );
   });
 
@@ -211,5 +285,20 @@ describe("countsBySection", () => {
       studies: 1,
       microbiology: 1,
     });
+  });
+
+  test("counts duplicate medications as a single group", () => {
+    const record = emptyRecord();
+    record.medications = [
+      {
+        name: { value: "Levofloxacina", sources: [source(1)] },
+        sources: [source(1)],
+      },
+      {
+        name: { value: "LEVOFLOXACINA", sources: [source(2)] },
+        sources: [source(2)],
+      },
+    ];
+    expect(countsBySection(record).medications).toBe(1);
   });
 });

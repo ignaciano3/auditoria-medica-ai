@@ -6,15 +6,18 @@ import type {
   MedicalHistory,
   Medication,
   MicrobiologyResult,
+  Source,
   Study,
 } from "@audit/domain";
 import { clinicalRecord, medicationStatusLabels } from "@audit/lib/i18n";
 import {
   dateConflictItemKey,
   displayValue,
+  foldText,
+  groupMedications,
   historyEntryItemKey,
   labResultItemKey,
-  medicationItemKey,
+  medicationGroupItemKey,
   mergeSourcePages,
   microbiologyItemKey,
   sourcePages,
@@ -109,39 +112,89 @@ export function HospitalizationSection({
   );
 }
 
-function medicationFields(medication: Medication): RecordFieldSpec[] {
+function collectMedicationField(
+  group: Medication[],
+  pick: (medication: Medication) => ExtractedValue<string> | undefined,
+): { value: string | undefined; sources: Source[] } {
+  const values: string[] = [];
+  const seen = new Set<string>();
+  const sources: Source[] = [];
+
+  for (const medication of group) {
+    const field = pick(medication);
+    if (field === undefined) continue;
+    sources.push(...field.sources);
+    const text = displayValue(field.value);
+    if (text === undefined) continue;
+    const key = foldText(text) ?? text;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    values.push(text);
+  }
+
+  return {
+    value: values.length > 0 ? values.join(" / ") : undefined,
+    sources,
+  };
+}
+
+function collectMedicationStatus(group: Medication[]): string | undefined {
+  const values: string[] = [];
+  const seen = new Set<string>();
+
+  for (const medication of group) {
+    if (medication.status === undefined) continue;
+    const label = medicationStatusLabels[medication.status];
+    const key = foldText(label) ?? label;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    values.push(label);
+  }
+
+  return values.length > 0 ? values.join(" / ") : undefined;
+}
+
+function medicationGroupFields(group: Medication[]): RecordFieldSpec[] {
+  const dose = collectMedicationField(group, (medication) => medication.dose);
+  const route = collectMedicationField(group, (medication) => medication.route);
+  const frequency = collectMedicationField(
+    group,
+    (medication) => medication.frequency,
+  );
+  const startDate = collectMedicationField(
+    group,
+    (medication) => medication.startDate,
+  );
+  const endDate = collectMedicationField(
+    group,
+    (medication) => medication.endDate,
+  );
+
   return [
-    {
-      label: clinicalRecord.dose,
-      value: medication.dose?.value,
-      sources: medication.dose?.sources ?? [],
-    },
+    { label: clinicalRecord.dose, value: dose.value, sources: dose.sources },
     {
       label: clinicalRecord.route,
-      value: medication.route?.value,
-      sources: medication.route?.sources ?? [],
+      value: route.value,
+      sources: route.sources,
     },
     {
       label: clinicalRecord.frequency,
-      value: medication.frequency?.value,
-      sources: medication.frequency?.sources ?? [],
+      value: frequency.value,
+      sources: frequency.sources,
     },
     {
       label: clinicalRecord.startDate,
-      value: medication.startDate?.value,
-      sources: medication.startDate?.sources ?? [],
+      value: startDate.value,
+      sources: startDate.sources,
     },
     {
       label: clinicalRecord.endDate,
-      value: medication.endDate?.value,
-      sources: medication.endDate?.sources ?? [],
+      value: endDate.value,
+      sources: endDate.sources,
     },
     {
       label: clinicalRecord.status,
-      value:
-        medication.status !== undefined
-          ? medicationStatusLabels[medication.status]
-          : undefined,
+      value: collectMedicationStatus(group),
       sources: [],
     },
   ];
@@ -159,19 +212,37 @@ function medicationSources(medication: Medication): number[] {
   );
 }
 
+function medicationGroupSources(group: Medication[]): number[] {
+  const pages = new Set<number>();
+  for (const medication of group) {
+    for (const page of medicationSources(medication)) {
+      pages.add(page);
+    }
+  }
+  return [...pages].sort((a, b) => a - b);
+}
+
+function medicationGroupName(group: Medication[]): string | undefined {
+  for (const medication of group) {
+    const name = displayValue(medication.name.value);
+    if (name !== undefined) return name;
+  }
+  return undefined;
+}
+
 function MedicationItem({
   documentId,
-  medication,
+  group,
 }: {
   documentId: string;
-  medication: Medication;
+  group: Medication[];
 }) {
   return (
     <RecordItem
       documentId={documentId}
-      title={displayValue(medication.name.value)}
-      fields={medicationFields(medication)}
-      pages={medicationSources(medication)}
+      title={medicationGroupName(group)}
+      fields={medicationGroupFields(group)}
+      pages={medicationGroupSources(group)}
     />
   );
 }
@@ -225,13 +296,15 @@ export function HistorySection({
                 {clinicalRecord.usualMedications}
               </h3>
               <ul className="flex list-none flex-col gap-2">
-                {history.usualMedications.map((medication, index) => (
-                  <MedicationItem
-                    key={medicationItemKey(medication, index)}
-                    documentId={documentId}
-                    medication={medication}
-                  />
-                ))}
+                {groupMedications(history.usualMedications).map(
+                  (group, index) => (
+                    <MedicationItem
+                      key={medicationGroupItemKey(group, index)}
+                      documentId={documentId}
+                      group={group.medications}
+                    />
+                  ),
+                )}
               </ul>
             </div>
           ) : null}
@@ -250,20 +323,22 @@ export function MedicationsSection({
   documentId: string;
   medications: Medication[];
 }) {
+  const groups = groupMedications(medications);
+
   return (
     <CollapsibleSection
       title={clinicalRecord.medications}
-      count={medications.length}
+      count={groups.length}
     >
-      {medications.length === 0 ? (
+      {groups.length === 0 ? (
         <RecordEmpty />
       ) : (
         <ul className="grid list-none grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {medications.map((medication, index) => (
+          {groups.map((group, index) => (
             <MedicationItem
-              key={medicationItemKey(medication, index)}
+              key={medicationGroupItemKey(group, index)}
               documentId={documentId}
-              medication={medication}
+              group={group.medications}
             />
           ))}
         </ul>
