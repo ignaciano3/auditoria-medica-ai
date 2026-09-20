@@ -1,7 +1,7 @@
 import { settings } from "@audit/lib/i18n";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BrandMark } from "../components/icons.tsx";
+import { BrandMark, SettingsIcon } from "../components/icons.tsx";
 import { ThemeToggle } from "../components/theme-toggle.tsx";
 import { themeInitScript } from "../lib/theme.ts";
 import "./globals.css";
@@ -28,10 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             <div className="ml-auto flex items-center gap-3">
               <Link
-                className="text-sm text-muted-foreground transition-colors hover:text-brand"
+                aria-label={settings.title}
+                title={settings.title}
+                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 href="/settings"
               >
-                {settings.title}
+                <SettingsIcon className="size-4" />
               </Link>
               <ThemeToggle />
             </div>
