@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { ChatContext, ChatIntent, LLMProvider } from "@audit/ai";
 import type {
+  ChatMessageRow,
+  ClinicalRecordIndex,
   ClinicalRecordWithFindings,
-  ChatMessageRow as Row,
 } from "@audit/db";
 import type {
   ClinicalRecord,
@@ -75,7 +76,11 @@ function makeDeps(options: {
   intent?: ChatIntent;
   added?: Array<{ role: string; content: string; citedPages: number[] }>;
   written?: Array<{ documentId: string; pageNumber: number; text: string }>;
-  recordUpdates?: Array<{ record: ClinicalRecord; findings: Finding[] }>;
+  recordUpdates?: Array<{
+    record: ClinicalRecord;
+    findings: Finding[];
+    indexed: ClinicalRecordIndex;
+  }>;
 }): ChatDeps {
   const added = options.added ?? [];
   const pagesList = options.pages ?? [page];
@@ -109,8 +114,8 @@ function makeDeps(options: {
               }
             : options.clinical,
         ),
-      updateRecord: (_documentId, updated, findings) => {
-        options.recordUpdates?.push({ record: updated, findings });
+      updateRecord: (_documentId, updated, findings, indexed) => {
+        options.recordUpdates?.push({ record: updated, findings, indexed });
         return Promise.resolve();
       },
     },
@@ -129,7 +134,7 @@ function makeDeps(options: {
           content: input.content,
           citedPages: input.citedPages,
           createdAt: new Date(),
-        } as Row);
+        } as ChatMessageRow);
       },
     },
     provider: fakeProvider(
@@ -149,8 +154,8 @@ const context: ChatContext = {
 };
 
 async function drain(
-  generator: AsyncGenerator<string, Row, void>,
-): Promise<{ deltas: string[]; final: Row }> {
+  generator: AsyncGenerator<string, ChatMessageRow, void>,
+): Promise<{ deltas: string[]; final: ChatMessageRow }> {
   const deltas: string[] = [];
   while (true) {
     const { value, done } = await generator.next();
@@ -368,6 +373,7 @@ describe("applyTranscriptionCorrection", () => {
     const recordUpdates: Array<{
       record: ClinicalRecord;
       findings: Finding[];
+      indexed: ClinicalRecordIndex;
     }> = [];
     const result = await applyTranscriptionCorrection(
       makeDeps({ status: "ready", pages, clinical, written, recordUpdates }),
@@ -383,6 +389,52 @@ describe("applyTranscriptionCorrection", () => {
     ]);
     expect(recordUpdates[0]?.record.patient.name?.value).toBe("Ariel");
     expect(recordUpdates[0]?.findings[0]?.title).toBe("Ariel");
+    expect(recordUpdates[0]?.indexed.patientName).toBe("Ariel");
+  });
+
+  test("does not write the record when only the page contains the literal", async () => {
+    const written: Array<{
+      documentId: string;
+      pageNumber: number;
+      text: string;
+    }> = [];
+    const recordUpdates: Array<{
+      record: ClinicalRecord;
+      findings: Finding[];
+      indexed: ClinicalRecordIndex;
+    }> = [];
+    const storedPages = [pageOf(3, "Paciente Ansel")];
+    const storedClinical: ClinicalRecordWithFindings = {
+      record: {
+        ...record,
+        patient: {
+          name: {
+            value: "Otro",
+            sources: [{ documentId: "d1", pageNumber: 3, text: "Otro" }],
+          },
+        },
+      },
+      findings: [],
+      extractionIncomplete: false,
+      failedChunkCount: 0,
+    };
+    const result = await applyTranscriptionCorrection(
+      makeDeps({
+        status: "ready",
+        pages: storedPages,
+        clinical: storedClinical,
+        written,
+        recordUpdates,
+      }),
+      input,
+    );
+    expect(result).toEqual({
+      ok: true,
+      newText: "Paciente Ariel",
+      recordChanged: false,
+    });
+    expect(written).toHaveLength(1);
+    expect(recordUpdates).toHaveLength(0);
   });
 
   test("refuses a literal that is not on the page and writes nothing", async () => {
@@ -434,6 +486,7 @@ describe("applyTranscriptionCorrection", () => {
     const recordUpdates: Array<{
       record: ClinicalRecord;
       findings: Finding[];
+      indexed: ClinicalRecordIndex;
     }> = [];
     const invalidClinical = {
       record: {

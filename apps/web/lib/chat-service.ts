@@ -22,6 +22,7 @@ import {
   type DocumentPage,
   type DocumentStatus,
   type Finding,
+  findingSchema,
 } from "@audit/domain";
 import { errors, ui } from "@audit/lib";
 
@@ -218,6 +219,7 @@ export async function applyTranscriptionCorrection(
   let patchedRecord: ClinicalRecord | null = null;
   let patchedFindings: Finding[] | null = null;
   let indexed: ClinicalRecordIndex | null = null;
+  let recordChanged = false;
   if (clinical !== null) {
     const recordResult = replaceLiteralDeep(
       clinical.record,
@@ -229,10 +231,17 @@ export async function applyTranscriptionCorrection(
       input.incorrect,
       input.correct,
     );
+    recordChanged = recordResult.occurrences + findingsResult.occurrences > 0;
     const parsed = clinicalRecordSchema.safeParse(recordResult.value);
     if (!parsed.success) return { ok: false, reason: "invalid" };
     patchedRecord = parsed.data as ClinicalRecord;
-    patchedFindings = findingsResult.value as Finding[];
+    const parsedFindings: Finding[] = [];
+    for (const item of findingsResult.value as unknown[]) {
+      const parsedFinding = findingSchema.safeParse(item);
+      if (!parsedFinding.success) return { ok: false, reason: "invalid" };
+      parsedFindings.push(parsedFinding.data as Finding);
+    }
+    patchedFindings = parsedFindings;
     indexed = indexRecord(patchedRecord);
   }
 
@@ -241,7 +250,7 @@ export async function applyTranscriptionCorrection(
     input.pageNumber,
     replaced.text,
   );
-  if (clinical !== null && patchedRecord && patchedFindings && indexed) {
+  if (recordChanged && patchedRecord && patchedFindings && indexed) {
     await deps.clinicalRecords.updateRecord(
       input.documentId,
       patchedRecord,
@@ -252,6 +261,6 @@ export async function applyTranscriptionCorrection(
   return {
     ok: true,
     newText: replaced.text,
-    recordChanged: clinical !== null,
+    recordChanged,
   };
 }

@@ -175,7 +175,12 @@ export async function applyPageTranscriptionCorrection(input: {
   incorrect: string;
   correct: string;
 }): Promise<ApplyTranscriptionCorrectionResult> {
-  const result = await applyTranscriptionCorrection(getContainer(), input);
+  let result: Awaited<ReturnType<typeof applyTranscriptionCorrection>>;
+  try {
+    result = await applyTranscriptionCorrection(getContainer(), input);
+  } catch {
+    return { ok: false, error: ui.editFailed };
+  }
   if (!result.ok) {
     return {
       ok: false,
