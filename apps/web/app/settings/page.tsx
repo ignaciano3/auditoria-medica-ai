@@ -1,5 +1,4 @@
 import { settings } from "@audit/lib/i18n";
-import { io } from "next/cache";
 import Link from "next/link";
 import { SettingsForm } from "../../components/settings-form.tsx";
 import { getSettingsView } from "../../lib/provider-settings.ts";
@@ -9,10 +8,7 @@ import {
   buildProviderModels,
 } from "../../lib/settings-options.ts";
 
-export const instant = false;
-
 export default async function SettingsPage() {
-  await io();
   const view = await getSettingsView();
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-3 py-8 sm:px-4">

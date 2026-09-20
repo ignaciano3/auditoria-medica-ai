@@ -8,7 +8,7 @@ import {
   settingsMissingKey,
 } from "@audit/lib";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { DOCUMENTS_TAG, documentTag } from "./cache-tags.ts";
+import { DOCUMENTS_TAG, documentTag, SETTINGS_TAG } from "./cache-tags.ts";
 import { getContainer } from "./container.ts";
 import {
   createUploadedDocument,
@@ -153,7 +153,10 @@ export async function saveAiSettings(
       { appSettings: container.appSettings, encrypt },
       input,
     );
-    if (result.ok) revalidatePath("/settings");
+    if (result.ok) {
+      revalidateTag(SETTINGS_TAG, "max");
+      revalidatePath("/settings");
+    }
     return result;
   } catch {
     return { ok: false, error: errors.settingsSaveFailed };
