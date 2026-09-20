@@ -6,7 +6,6 @@ import type {
   MedicalHistory,
   Medication,
   MicrobiologyResult,
-  Patient,
   Study,
 } from "@audit/domain";
 import { clinicalRecord, medicationStatusLabels } from "@audit/lib/i18n";
@@ -34,47 +33,6 @@ import { EvidenceLinks } from "./evidence-link.tsx";
 
 function hasValue(value: string | number | undefined): boolean {
   return displayValue(value) !== undefined;
-}
-
-export function PatientSection({
-  documentId,
-  patient,
-}: {
-  documentId: string;
-  patient: Patient;
-}) {
-  const fields: RecordFieldSpec[] = [
-    {
-      label: clinicalRecord.name,
-      value: patient.name?.value,
-      sources: patient.name?.sources ?? [],
-    },
-    {
-      label: clinicalRecord.age,
-      value: patient.age?.value,
-      sources: patient.age?.sources ?? [],
-    },
-    {
-      label: clinicalRecord.sex,
-      value: patient.sex?.value,
-      sources: patient.sex?.sources ?? [],
-    },
-    {
-      label: clinicalRecord.birthDate,
-      value: patient.birthDate?.value,
-      sources: patient.birthDate?.sources ?? [],
-    },
-  ];
-
-  return (
-    <CollapsibleSection title={clinicalRecord.patient}>
-      {fields.some((field) => hasValue(field.value)) ? (
-        <RecordFields documentId={documentId} fields={fields} />
-      ) : (
-        <RecordEmpty />
-      )}
-    </CollapsibleSection>
-  );
 }
 
 function DateConflicts({

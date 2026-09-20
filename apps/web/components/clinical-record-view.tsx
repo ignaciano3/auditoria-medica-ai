@@ -11,7 +11,6 @@ import {
   LaboratorySection,
   MedicationsSection,
   MicrobiologySection,
-  PatientSection,
   StudiesSection,
 } from "./clinical-record-sections.tsx";
 import { Callout } from "./ui/callout.tsx";
@@ -43,7 +42,6 @@ export function ClinicalRecordView({
         </Callout>
       ) : null}
 
-      <PatientSection documentId={documentId} patient={record.patient} />
       <HospitalizationSection
         documentId={documentId}
         hospitalization={record.hospitalization}
