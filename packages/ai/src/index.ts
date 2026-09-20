@@ -1,4 +1,10 @@
 export {
+  type RetrievedPage,
+  type RetrieveOptions,
+  retrievePages,
+  tokenize,
+} from "./chat/retriever.ts";
+export {
   type ChunkPagesOptions,
   chunkPages,
 } from "./extraction/chunk-pages.ts";
