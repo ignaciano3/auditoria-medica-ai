@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { ClinicalRecord, Finding, Source } from "@audit/domain";
 import { type Database, getDb } from "../client.ts";
+import { resolveTestDatabaseUrl } from "../testing/test-database.ts";
 import { createClinicalRecordRepository } from "./clinical-records.ts";
 import { createDocumentRepository } from "./documents.ts";
 
-const url = process.env.TEST_DATABASE_URL;
+const url = resolveTestDatabaseUrl();
 const maybe = url ? describe : describe.skip;
 
 const source: Source = { documentId: "doc", pageNumber: 1, text: "texto" };

@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { type Database, getDb } from "../client.ts";
+import { resolveTestDatabaseUrl } from "../testing/test-database.ts";
 import { createChatMessageRepository } from "./chat-messages.ts";
 import { createDocumentRepository } from "./documents.ts";
 
-const url = process.env.TEST_DATABASE_URL;
+const url = resolveTestDatabaseUrl();
 const maybe = url ? describe : describe.skip;
 
 maybe("chat message repository", () => {

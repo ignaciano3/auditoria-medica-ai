@@ -6,7 +6,9 @@ services:
       POSTGRES_PASSWORD: audit
       POSTGRES_DB: audit
     ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+      - "./init/01-create-test-db.sql:/docker-entrypoint-initdb.d/01-create-test-db.sql:ro"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U audit"]
       interval: 5s
@@ -40,6 +42,17 @@ services:
     command: ["bun", "run", "--cwd", "packages/db", "db:migrate"]
     environment:
       DATABASE_URL: postgres://audit:audit@postgres:5432/audit
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  migrate-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: ["bun", "run", "--cwd", "packages/db", "db:migrate"]
+    environment:
+      DATABASE_URL: postgres://audit:audit@postgres:5432/audit_test
     depends_on:
       postgres:
         condition: service_healthy

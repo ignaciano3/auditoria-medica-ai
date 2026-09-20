@@ -115,7 +115,7 @@ Notas:
 
 - La app web corre en el host, así que usa los valores de `.env` con `localhost` (`DATABASE_URL=...@localhost:5432/...`, `S3_ENDPOINT=http://localhost:9000`).
 - El `worker` corre dentro de Compose y usa nombres de servicio (`postgres`, `minio`); Compose le inyecta sus propias variables.
-- Existen tests de integración que se **omiten** salvo que definas `TEST_DATABASE_URL`.
+- Existen tests de integración que se **omiten** salvo que definas `TEST_DATABASE_URL`. Apuntala a una base dedicada cuyo nombre termine en `_test` (Compose crea `audit_test`): los tests borran filas y se **niegan a correr** contra la base de desarrollo.
 
 ### Configuración de IA
 
@@ -140,6 +140,9 @@ bun run format       # formatea con Biome
 # Un solo paquete/archivo
 bun run --cwd packages/lib test
 bun test packages/documents/src/rendering/render-pages.test.ts
+
+# Tests de integración de DB (base dedicada, nunca la de desarrollo)
+TEST_DATABASE_URL=postgres://audit:audit@localhost:5432/audit_test bun test packages/db
 ```
 
 Fixture local del PDF real (nunca se commitea, está ignorado por `.gitignore`):
