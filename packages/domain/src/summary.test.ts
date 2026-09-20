@@ -69,8 +69,8 @@ describe("buildClinicalSummary", () => {
 });
 
 describe("buildAuditSummary", () => {
-  test("groups findings by category and counts review items", () => {
-    const audit = buildAuditSummary(baseRecord(), [
+  test("groups findings by category", () => {
+    const audit = buildAuditSummary([
       finding("documentation"),
       finding("temporal"),
       finding("medication"),
@@ -78,22 +78,5 @@ describe("buildAuditSummary", () => {
 
     expect(audit.documentationGaps).toHaveLength(1);
     expect(audit.inconsistencies).toHaveLength(2);
-    expect(audit.requiresReview).toBe(3);
-  });
-
-  test("collects treatment changes from the timeline", () => {
-    const record = baseRecord();
-    record.medications = [
-      {
-        name: value("Levofloxacina", 5),
-        startDate: value("15/02/2026", 5),
-        sources: [source(5)],
-      },
-    ];
-
-    const audit = buildAuditSummary(record, []);
-    expect(audit.treatmentChanges).toHaveLength(1);
-    expect(audit.treatmentChanges[0]?.type).toBe("medication_start");
-    expect(audit.majorTreatments).toHaveLength(1);
   });
 });

@@ -23,15 +23,8 @@ function finding(): Finding {
 
 function summary(): AuditSummary {
   return {
-    durationDays: 15,
-    majorEvents: [],
-    majorTreatments: [],
-    treatmentChanges: [],
-    relevantStudies: [],
-    microbiology: [],
     documentationGaps: [],
     inconsistencies: [finding()],
-    requiresReview: 1,
   };
 }
 
@@ -43,6 +36,5 @@ describe("AuditSummaryView", () => {
 
     expect(getByText("Inconsistencias detectadas")).not.toBeNull();
     expect(queryByText("Posible inconsistencia temporal")).toBeNull();
-    expect(getByText("1 elementos requieren revisión")).not.toBeNull();
   });
 });

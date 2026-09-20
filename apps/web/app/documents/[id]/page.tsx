@@ -94,9 +94,7 @@ async function DocumentContent({
   const clinicalSummary =
     clinical !== null ? buildClinicalSummary(clinical.record) : null;
   const auditSummary =
-    clinical !== null
-      ? buildAuditSummary(clinical.record, clinical.findings)
-      : null;
+    clinical !== null ? buildAuditSummary(clinical.findings) : null;
 
   const pageParam = Array.isArray(query.page) ? query.page[0] : query.page;
   const parsedPage = Number.parseInt(pageParam ?? "1", 10);

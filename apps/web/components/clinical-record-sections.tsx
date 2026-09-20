@@ -11,7 +11,6 @@ import type {
 import { clinicalRecord, medicationStatusLabels } from "@audit/lib/i18n";
 import {
   dateConflictItemKey,
-  diagnosisItemKey,
   displayValue,
   historyEntryItemKey,
   labResultItemKey,
@@ -78,32 +77,10 @@ export function HospitalizationSection({
   documentId: string;
   hospitalization: Hospitalization;
 }) {
-  const {
-    admissionDate,
-    dischargeDate,
-    reason,
-    diagnoses,
-    dischargeDiagnosis,
-    admissionDateConflicts,
-    dischargeDateConflicts,
-  } = hospitalization;
+  const { dischargeDiagnosis, admissionDateConflicts, dischargeDateConflicts } =
+    hospitalization;
 
   const fields: RecordFieldSpec[] = [
-    {
-      label: clinicalRecord.admissionDate,
-      value: admissionDate?.value,
-      sources: admissionDate?.sources ?? [],
-    },
-    {
-      label: clinicalRecord.dischargeDate,
-      value: dischargeDate?.value,
-      sources: dischargeDate?.sources ?? [],
-    },
-    {
-      label: clinicalRecord.reason,
-      value: reason?.value,
-      sources: reason?.sources ?? [],
-    },
     {
       label: clinicalRecord.dischargeDiagnosis,
       value: dischargeDiagnosis?.value,
@@ -111,36 +88,10 @@ export function HospitalizationSection({
     },
   ];
 
-  const hasAny =
-    fields.some((field) => hasValue(field.value)) || diagnoses.length > 0;
-
   return (
     <CollapsibleSection title={clinicalRecord.hospitalization}>
-      {hasAny ? (
-        <div className="flex flex-col gap-3">
-          <RecordFields documentId={documentId} fields={fields} />
-          {diagnoses.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              <h3 className="text-sm font-semibold text-muted-foreground">
-                {clinicalRecord.diagnoses}
-              </h3>
-              <ul className="flex list-none flex-col gap-1">
-                {diagnoses.map((diagnosis, index) => (
-                  <li
-                    key={diagnosisItemKey(diagnosis.value, index)}
-                    className="flex flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]"
-                  >
-                    <RecordValue value={diagnosis.value} />
-                    <EvidenceLinks
-                      documentId={documentId}
-                      pages={sourcePages(diagnosis.sources)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
+      {fields.some((field) => hasValue(field.value)) ? (
+        <RecordFields documentId={documentId} fields={fields} />
       ) : (
         <RecordEmpty />
       )}
