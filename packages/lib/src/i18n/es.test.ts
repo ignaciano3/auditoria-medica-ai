@@ -7,6 +7,7 @@ import {
   failedChunksIndicator,
   failedPagesIndicator,
   medicationStatusLabels,
+  ui,
 } from "./es.ts";
 
 describe("documentStatusLabels", () => {
@@ -88,6 +89,29 @@ describe("clinicalRecord full-view labels", () => {
 
   test("labels invalid placeholder values", () => {
     expect(clinicalRecord.invalidValue).toBe("inválido");
+  });
+});
+
+describe("ui viewer and chat labels", () => {
+  test("labels the image tab", () => {
+    expect(ui.image).toBe("Imagen");
+  });
+
+  test("labels the chat input and send action", () => {
+    expect(ui.chatPlaceholder).toBe("Escribí tu pregunta…");
+    expect(ui.chatSend).toBe("Enviar");
+  });
+
+  test("provides the empty-chat invitation", () => {
+    expect(ui.chatEmptyTitle.length).toBeGreaterThan(0);
+    expect(ui.chatEmptyBody.length).toBeGreaterThan(0);
+  });
+
+  test("provides empty-chat suggestions", () => {
+    expect(ui.chatSuggestions.length).toBeGreaterThan(0);
+    expect(
+      ui.chatSuggestions.every((suggestion) => suggestion.length > 0),
+    ).toBe(true);
   });
 });
 

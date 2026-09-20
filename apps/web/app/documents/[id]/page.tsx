@@ -4,6 +4,7 @@ import { io } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ChatPanel } from "../../../components/chat-panel.tsx";
 import { ClinicalRecordView } from "../../../components/clinical-record-view.tsx";
 import { DeleteDocumentButton } from "../../../components/delete-document-button.tsx";
 import { DocumentStatusBadge } from "../../../components/document-status-badge.tsx";
@@ -120,18 +121,25 @@ async function DocumentContent({
           reviews={reviews}
         />
       ) : null}
-      {pageCount !== null && pageCount > 0 ? (
-        <PdfViewer
-          documentId={doc.id}
-          pageCount={pageCount}
-          initialPage={initialPage}
-          pages={pages}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {pageCount === null ? ui.loading : ui.noPages}
-        </p>
-      )}
+      <div className="grid gap-4 lg:-mb-6 lg:h-dvh lg:grid-cols-[1.7fr_1fr] lg:pb-8">
+        <div className="min-h-0">
+          {pageCount !== null && pageCount > 0 ? (
+            <PdfViewer
+              documentId={doc.id}
+              pageCount={pageCount}
+              initialPage={initialPage}
+              pages={pages}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {pageCount === null ? ui.loading : ui.noPages}
+            </p>
+          )}
+        </div>
+        <div className="min-h-0">
+          <ChatPanel />
+        </div>
+      </div>
     </>
   );
 }
