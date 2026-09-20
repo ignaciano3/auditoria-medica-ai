@@ -424,4 +424,44 @@ describe("applyTranscriptionCorrection", () => {
     });
     expect(written).toHaveLength(1);
   });
+
+  test("refuses and writes nothing when the patched record is invalid", async () => {
+    const written: Array<{
+      documentId: string;
+      pageNumber: number;
+      text: string;
+    }> = [];
+    const recordUpdates: Array<{
+      record: ClinicalRecord;
+      findings: Finding[];
+    }> = [];
+    const invalidClinical = {
+      record: {
+        patient: {},
+        hospitalization: { diagnoses: [] },
+        history: { pathological: [], allergies: [], usualMedications: [] },
+        medications: [{ name: { value: "Ansel", sources: [] }, sources: [] }],
+        laboratory: [],
+        studies: [],
+        microbiology: [],
+        clinicalEvents: [],
+      },
+      findings: [],
+      extractionIncomplete: false,
+      failedChunkCount: 0,
+    } as unknown as ClinicalRecordWithFindings;
+    const result = await applyTranscriptionCorrection(
+      makeDeps({
+        status: "ready",
+        pages,
+        clinical: invalidClinical,
+        written,
+        recordUpdates,
+      }),
+      input,
+    );
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    expect(written).toHaveLength(0);
+    expect(recordUpdates).toHaveLength(0);
+  });
 });
