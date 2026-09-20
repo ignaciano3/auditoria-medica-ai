@@ -107,6 +107,8 @@ Referencia en `.env.example`:
 | `LLM_PROVIDER` / `LLM_MODEL` | Proveedor y modelo para extracción (`openai` \| `heuristic`). Modelo por defecto: `gpt-5.6-terra` |
 | `OCR_PROVIDER` / `OCR_MODEL` | Proveedor y modelo para OCR (`openai` \| `tesseract` \| `local`). Por defecto `tesseract`; `OCR_MODEL` (`gpt-5.6-luna`) se usa para clasificar páginas |
 | `OPENAI_API_KEY` | Clave de OpenAI (obligatoria si `LLM_PROVIDER` es `openai` o `OCR_PROVIDER` es `openai`/`tesseract`) |
+| `OPENCODE_API_KEY` | Clave de OpenCode Go (`LLM_PROVIDER=opencode` u `OCR_PROVIDER=opencode`) |
+| `SETTINGS_ENCRYPTION_KEY` | Clave de 32 bytes (base64 o hex de 64 caracteres) que cifra las claves guardadas desde `/settings`. Generala con `openssl rand -base64 32` |
 | `DOCUMENT_RETENTION_DAYS` | Retención de documentos |
 
 Notas:
@@ -114,6 +116,14 @@ Notas:
 - La app web corre en el host, así que usa los valores de `.env` con `localhost` (`DATABASE_URL=...@localhost:5432/...`, `S3_ENDPOINT=http://localhost:9000`).
 - El `worker` corre dentro de Compose y usa nombres de servicio (`postgres`, `minio`); Compose le inyecta sus propias variables.
 - Existen tests de integración que se **omiten** salvo que definas `TEST_DATABASE_URL`.
+
+### Configuración de IA
+
+La app lee la configuración de proveedores desde `/settings`: ahí elegís proveedor y modelo de LLM y de OCR, y pegás las claves de API. Las claves guardadas se cifran con AES-256-GCM en Postgres; necesitás definir `SETTINGS_ENCRYPTION_KEY` (`openssl rand -base64 32`) para poder guardarlas. Los cambios se aplican en el siguiente job de procesamiento.
+
+> **OpenCode Go** está pensado para agentes de programación: el tráfico de este pipeline puede ser monitoreado o limitado, y la retención por modelo varía según el proveedor. Revisá las condiciones antes de usarlo con datos reales (PHI).
+
+La página `/settings` no tiene autenticación: se apoya en que la tailnet sea de confianza.
 
 ## Comandos de desarrollo
 
