@@ -75,3 +75,9 @@ export type {
   Source,
   TextBlock,
 } from "./source.ts";
+export {
+  buildTimeline,
+  type TimelineDetail,
+  type TimelineEntry,
+  type TimelineGroup,
+} from "./timeline.ts";
